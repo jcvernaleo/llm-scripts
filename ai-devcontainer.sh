@@ -450,22 +450,22 @@ $extra_postinstall"
     case "$backend" in
         claude)
             backend_name="Claude Code"
-            backend_install="# Install Claude Code via native installer (with retry)
-RUN curl -fsSL https://claude.ai/install.sh | bash || \\
+            backend_install='# Install Claude Code via native installer (with retry)
+RUN curl -fsSL https://claude.ai/install.sh | bash || \
     (sleep 5 && curl -fsSL https://claude.ai/install.sh | bash --force)
 
 # Add Claude to PATH (installed to ~/.local/bin)
-ENV PATH=\"/home/claude/.local/bin:\\\$PATH\"
-RUN echo 'export PATH=\"/home/claude/.local/bin:\\\$PATH\"' >> /home/claude/.bashrc"
+ENV PATH="/home/claude/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+RUN echo '"'"'export PATH="/home/claude/.local/bin:$PATH"'"'"' >> /home/claude/.bashrc'
             ;;
         opencode)
             backend_name="OpenCode"
-            backend_install="# Install OpenCode via go install
+            backend_install='# Install OpenCode via go install
 RUN go install github.com/opencode-ai/opencode@latest
 
 # Add Go bin to PATH
-ENV PATH=\"/home/claude/go/bin:\\\$PATH\"
-RUN echo 'export PATH=\"/home/claude/go/bin:\\\$PATH\"' >> /home/claude/.bashrc"
+ENV PATH="/home/claude/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+RUN echo '"'"'export PATH="/home/claude/go/bin:$PATH"'"'"' >> /home/claude/.bashrc'
             # OpenCode requires Go
             if [[ "$lang" != "go" && "$lang" != "all" ]]; then
                 apk_extras="
@@ -531,10 +531,10 @@ WORKDIR /home/\$USERNAME
 $backend_install
 
 # Pre-populate SSH known_hosts with GitHub keys to avoid fingerprint prompts
-RUN mkdir -p /home/claude/.ssh && \\
-    ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/claude/.ssh/known_hosts 2>/dev/null && \\
-    chmod 700 /home/claude/.ssh && \\
-    chmod 600 /home/claude/.ssh/known_hosts
+RUN /bin/mkdir -p /home/claude/.ssh && \\
+    /usr/bin/ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/claude/.ssh/known_hosts 2>/dev/null && \\
+    /bin/chmod 700 /home/claude/.ssh && \\
+    /bin/chmod 600 /home/claude/.ssh/known_hosts
 $postinstall_extras
 # Set environment
 ENV SHELL=/bin/bash
