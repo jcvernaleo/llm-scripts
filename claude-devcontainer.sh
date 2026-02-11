@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 #
-# claude-devcontainer.sh - Manage Claude Code development containers with Podman
+# ai-devcontainer.sh - Manage AI coding assistant development containers with Podman
 #
 # Usage:
-#   claude-devcontainer.sh init [--lang LANG] [project-dir]   Initialize a new .devcontainer
-#   claude-devcontainer.sh build [project-dir]   Build the container image
-#   claude-devcontainer.sh start [--port PORT]... [--open-network] [project-dir]   Start a container
-#   claude-devcontainer.sh shell [project-dir]   Get a shell in the running container
-#   claude-devcontainer.sh claude [--port PORT]... [--open-network] [project-dir]  Run claude directly
-#   claude-devcontainer.sh stop [project-dir]    Stop and remove the container
-#   claude-devcontainer.sh status                List running claude-dev containers
-#   claude-devcontainer.sh langs                 List supported languages
+#   ai-devcontainer.sh init [--lang LANG] [--backend BACKEND] [project-dir]
+#   ai-devcontainer.sh build [project-dir]
+#   ai-devcontainer.sh start [--port PORT]... [--open-network] [project-dir]
+#   ai-devcontainer.sh shell [project-dir]
+#   ai-devcontainer.sh code [--port PORT]... [--open-network] [project-dir]
+#   ai-devcontainer.sh stop [project-dir]
+#   ai-devcontainer.sh status
+#   ai-devcontainer.sh langs
 #
 # Supported languages for --lang:
 #   base, go, rust, python, node, emacs, all
+#
+# Supported backends for --backend:
+#   claude    Claude Code (default) - Anthropic's AI coding assistant
+#   opencode  OpenCode - open-source alternative, supports multiple LLM providers
 #
 # Port forwarding:
 #   --port, -p HOST:CONTAINER   Forward a port (can be specified multiple times)
@@ -23,18 +27,16 @@
 #                           By default, network is restricted to essential domains only
 #
 # Environment variables:
-#   CLAUDE_DEVCONTAINER_ENGINE   Container engine to use (default: podman)
-#   CLAUDE_DEVCONTAINER_IMAGE    Image name (default: claude-devcontainer)
-#   CLAUDE_CONFIG_DIR            Where Claude stores config (default: ~/.claude)
+#   AI_DEVCONTAINER_ENGINE   Container engine to use (default: podman)
+#   AI_DEVCONTAINER_IMAGE    Image name (default: ai-devcontainer-claude or ai-devcontainer-opencode)
 #
 #
 
 set -euo pipefail
 
 # Configuration
-ENGINE="${CLAUDE_DEVCONTAINER_ENGINE:-podman}"
-IMAGE_NAME="${CLAUDE_DEVCONTAINER_IMAGE:-claude-devcontainer}"
-CLAUDE_CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+ENGINE="${AI_DEVCONTAINER_ENGINE:-podman}"
+DEFAULT_BACKEND="claude"
 
 # Colors for output
 RED='\033[0;31m'
@@ -52,7 +54,7 @@ container_name_for_project() {
     local basename
     basename=$(basename "$project_dir")
     # Sanitize: lowercase, replace non-alphanumeric with dash
-    echo "claude-dev-${basename//[^a-zA-Z0-9]/-}" | tr '[:upper:]' '[:lower:]'
+    echo "ai-dev-${basename//[^a-zA-Z0-9]/-}" | tr '[:upper:]' '[:lower:]'
 }
 
 # Check if container exists
@@ -115,10 +117,6 @@ lang_postinstall_all="$lang_postinstall_node"
 
 # Firewall allowed domains (base domains always allowed)
 FIREWALL_DOMAINS_BASE=(
-    # Claude API
-    "api.anthropic.com"
-    "anthropic.com"
-    "claude.ai"
     # GitHub
     "github.com"
     "api.github.com"
@@ -126,11 +124,30 @@ FIREWALL_DOMAINS_BASE=(
     "objects.githubusercontent.com"
     "codeload.github.com"
     "ssh.github.com"
-    # Statsig (Claude telemetry)
+)
+
+# Claude Code specific domains
+FIREWALL_DOMAINS_BACKEND_CLAUDE=(
+    "api.anthropic.com"
+    "anthropic.com"
+    "claude.ai"
     "api.statsig.com"
     "statsigapi.net"
-    # Sentry (error reporting)
     "sentry.io"
+)
+
+# OpenCode specific domains (supports multiple LLM providers)
+FIREWALL_DOMAINS_BACKEND_OPENCODE=(
+    # Anthropic
+    "api.anthropic.com"
+    # OpenAI
+    "api.openai.com"
+    # Google
+    "generativelanguage.googleapis.com"
+    # Groq
+    "api.groq.com"
+    # OpenRouter
+    "openrouter.ai"
 )
 
 FIREWALL_DOMAINS_GO=(
@@ -164,11 +181,23 @@ FIREWALL_DOMAINS_EMACS=(
     "elpa.nongnu.org"
 )
 
-# Get firewall domains for a language
+# Get firewall domains for a language and backend
 get_firewall_domains() {
     local lang="$1"
+    local backend="${2:-claude}"
     local domains=("${FIREWALL_DOMAINS_BASE[@]}")
     
+    # Add backend-specific domains
+    case "$backend" in
+        claude)
+            domains+=("${FIREWALL_DOMAINS_BACKEND_CLAUDE[@]}")
+            ;;
+        opencode)
+            domains+=("${FIREWALL_DOMAINS_BACKEND_OPENCODE[@]}")
+            ;;
+    esac
+    
+    # Add language-specific domains
     case "$lang" in
         go)
             domains+=("${FIREWALL_DOMAINS_GO[@]}")
@@ -200,13 +229,14 @@ get_firewall_domains() {
 # Generate firewall setup script
 generate_firewall_script() {
     local lang="$1"
+    local backend="${2:-claude}"
     local domains
-    domains=$(get_firewall_domains "$lang")
+    domains=$(get_firewall_domains "$lang" "$backend")
     
     cat << 'FIREWALL_HEADER'
 #!/bin/bash
 #
-# Network firewall setup for Claude Code container
+# Network firewall setup for AI coding assistant container
 # Restricts outbound connections to whitelisted domains only
 #
 
@@ -279,12 +309,13 @@ FIREWALL_FOOTER
 setup_container_firewall() {
     local container_name="$1"
     local lang="$2"
+    local backend="${3:-claude}"
     
     log_info "Setting up network firewall (restricted mode)"
     
     # Generate and execute firewall script
     local firewall_script
-    firewall_script=$(generate_firewall_script "$lang")
+    firewall_script=$(generate_firewall_script "$lang" "$backend")
     
     # Run as root to set up iptables
     echo "$firewall_script" | $ENGINE exec -i "$container_name" sudo bash
@@ -297,7 +328,7 @@ cmd_langs() {
     cat << 'EOF'
 Supported languages for --lang:
 
-  base     Minimal setup with Claude Code (native installer) and common tools
+  base     Minimal setup with AI coding assistant and common tools
   go       Base + Go toolchain
   rust     Base + Rust + Cargo
   python   Base + Python 3 + pip + virtualenv
@@ -305,18 +336,22 @@ Supported languages for --lang:
   emacs    Base + Emacs (for elisp development)
   all      Everything: Go + Rust + Python + Node.js/pnpm + Emacs
 
+Supported backends for --backend:
+
+  claude    Claude Code (default) - Anthropic's AI coding assistant
+  opencode  OpenCode - open-source, supports multiple LLM providers
+
 Examples:
-  claude-devcontainer.sh init --lang go ~/projects/mygoapp
-  claude-devcontainer.sh init --lang rust .
-  claude-devcontainer.sh init --lang python ~/projects/mlproject
-  claude-devcontainer.sh init --lang emacs ~/projects/my-emacs-package
-  claude-devcontainer.sh init --lang all ~/projects/polyglot
+  ai-devcontainer.sh init --lang go ~/projects/mygoapp
+  ai-devcontainer.sh init --lang node --backend opencode ~/projects/webapp
+  ai-devcontainer.sh init --backend opencode --lang python .
 EOF
 }
 
 # Initialize a .devcontainer directory in a project
 cmd_init() {
     local lang="base"
+    local backend="$DEFAULT_BACKEND"
     local project_dir=""
 
     # Parse arguments
@@ -328,6 +363,14 @@ cmd_init() {
                 ;;
             --lang=*)
                 lang="${1#*=}"
+                shift
+                ;;
+            --backend|-b)
+                backend="$2"
+                shift 2
+                ;;
+            --backend=*)
+                backend="${1#*=}"
                 shift
                 ;;
             *)
@@ -350,12 +393,22 @@ cmd_init() {
             ;;
     esac
 
+    # Validate backend
+    case "$backend" in
+        claude|opencode) ;;
+        *)
+            log_error "Unknown backend: $backend"
+            log_error "Supported: claude, opencode"
+            exit 1
+            ;;
+    esac
+
     if [[ -d "$devcontainer_dir" ]]; then
         log_error "Directory $devcontainer_dir already exists"
         exit 1
     fi
 
-    log_info "Creating .devcontainer in $project_dir (language: $lang)"
+    log_info "Creating .devcontainer in $project_dir (language: $lang, backend: $backend)"
     mkdir -p "$devcontainer_dir"
 
     # Get language-specific additions
@@ -390,9 +443,46 @@ $extra_env"
 $extra_postinstall"
     fi
 
+    # Backend-specific installation commands
+    local backend_install=""
+    local backend_path=""
+    local backend_name=""
+    case "$backend" in
+        claude)
+            backend_name="Claude Code"
+            backend_install="# Install Claude Code via native installer (with retry)
+RUN curl -fsSL https://claude.ai/install.sh | bash || \\
+    (sleep 5 && curl -fsSL https://claude.ai/install.sh | bash --force)
+
+# Add Claude to PATH (installed to ~/.local/bin)
+ENV PATH=\"/home/claude/.local/bin:\\\$PATH\"
+RUN echo 'export PATH=\"/home/claude/.local/bin:\\\$PATH\"' >> /home/claude/.bashrc"
+            ;;
+        opencode)
+            backend_name="OpenCode"
+            backend_install="# Install OpenCode via go install
+RUN go install github.com/opencode-ai/opencode@latest
+
+# Add Go bin to PATH
+ENV PATH=\"/home/claude/go/bin:\\\$PATH\"
+RUN echo 'export PATH=\"/home/claude/go/bin:\\\$PATH\"' >> /home/claude/.bashrc"
+            # OpenCode requires Go
+            if [[ "$lang" != "go" && "$lang" != "all" ]]; then
+                apk_extras="
+# Go (required for OpenCode)
+RUN apk add --no-cache go
+$apk_extras"
+                env_extras="ENV GOPATH=/home/claude/go
+$env_extras"
+            fi
+            ;;
+    esac
+
     # Create Dockerfile
     cat > "$devcontainer_dir/Dockerfile" << DOCKERFILE
 FROM alpine:3.21
+
+# Backend: $backend_name
 
 # Install system dependencies
 RUN apk add --no-cache \\
@@ -438,18 +528,12 @@ RUN mkdir -p /workspace && chown \$USER_UID:\$USER_GID /workspace
 USER \$USERNAME
 WORKDIR /home/\$USERNAME
 
-# Install Claude Code via native installer (with retry)
-RUN curl -fsSL https://claude.ai/install.sh | bash || \
-    (sleep 5 && curl -fsSL https://claude.ai/install.sh | bash --force)
-
-# Add Claude to PATH (installed to ~/.local/bin)
-ENV PATH="/home/claude/.local/bin:\$PATH"
-RUN echo 'export PATH="/home/claude/.local/bin:\$PATH"' >> /home/claude/.bashrc
+$backend_install
 
 # Pre-populate SSH known_hosts with GitHub keys to avoid fingerprint prompts
-RUN mkdir -p /home/claude/.ssh && \
-    ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/claude/.ssh/known_hosts 2>/dev/null && \
-    chmod 700 /home/claude/.ssh && \
+RUN mkdir -p /home/claude/.ssh && \\
+    ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/claude/.ssh/known_hosts 2>/dev/null && \\
+    chmod 700 /home/claude/.ssh && \\
     chmod 600 /home/claude/.ssh/known_hosts
 $postinstall_extras
 # Set environment
@@ -461,24 +545,29 @@ WORKDIR /workspace
 DOCKERFILE
 
     # Create a simple devcontainer.json for reference
-    cat > "$devcontainer_dir/devcontainer.json" << 'DEVCONTAINER'
+    local config_dir=".claude"
+    [[ "$backend" == "opencode" ]] && config_dir=".opencode"
+    
+    cat > "$devcontainer_dir/devcontainer.json" << DEVCONTAINER
 {
-  "name": "Claude Code Dev Container",
+  "name": "$backend_name Dev Container",
   "build": {
     "dockerfile": "Dockerfile"
   },
   "workspaceFolder": "/workspace",
   "remoteUser": "claude",
   "mounts": [
-    "source=${localEnv:HOME}/.claude,target=/home/claude/.claude,type=bind"
+    "source=\${localEnv:HOME}/$config_dir,target=/home/claude/$config_dir,type=bind"
   ],
   "containerEnv": {
     "EDITOR": "mg",
     "VISUAL": "mg"
-  },
-  "postCreateCommand": "claude --version"
+  }
 }
 DEVCONTAINER
+
+    # Store backend choice for later commands
+    echo "$backend" > "$devcontainer_dir/.backend"
 
     # Create .gitignore additions
     cat > "$devcontainer_dir/.gitignore" << 'GITIGNORE'
@@ -495,8 +584,7 @@ GITIGNORE
     log_info "Next steps:"
     log_info "  1. Review and customize the Dockerfile for your project"
     log_info "  2. Run: $0 build $project_dir"
-    log_info "  3. Run: $0 start $project_dir"
-    log_info "  4. Run: $0 shell $project_dir"
+    log_info "  3. Run: $0 code $project_dir"
 }
 
 # Build the container image
@@ -504,6 +592,7 @@ cmd_build() {
     local project_dir
     project_dir=$(get_project_dir "${1:-.}")
     local dockerfile="$project_dir/.devcontainer/Dockerfile"
+    local backend_file="$project_dir/.devcontainer/.backend"
 
     if [[ ! -f "$dockerfile" ]]; then
         log_error "No Dockerfile found at $dockerfile"
@@ -511,13 +600,21 @@ cmd_build() {
         exit 1
     fi
 
+    # Read backend from stored file
+    local backend="claude"
+    if [[ -f "$backend_file" ]]; then
+        backend=$(cat "$backend_file")
+    fi
+    
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+
     log_info "Building image from $dockerfile"
     $ENGINE build \
-        -t "$IMAGE_NAME" \
+        -t "$image_name" \
         -f "$dockerfile" \
         "$project_dir/.devcontainer"
 
-    log_info "Image $IMAGE_NAME built successfully"
+    log_info "Image $image_name built successfully"
 }
 
 # Start a container for the project
@@ -555,6 +652,17 @@ cmd_start() {
     project_dir=$(get_project_dir "${project_dir:-.}")
     local container_name
     container_name=$(container_name_for_project "$project_dir")
+    
+    # Read backend from stored file
+    local backend="claude"
+    local backend_file="$project_dir/.devcontainer/.backend"
+    if [[ -f "$backend_file" ]]; then
+        backend=$(cat "$backend_file")
+    fi
+    
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+    local config_dir="$HOME/.claude"
+    [[ "$backend" == "opencode" ]] && config_dir="$HOME/.opencode"
 
     # Check if already running
     if container_running "$container_name"; then
@@ -573,25 +681,24 @@ cmd_start() {
     fi
 
     # Check if image exists
-    if ! image_exists "$IMAGE_NAME"; then
-        log_warn "Image $IMAGE_NAME not found, building..."
+    if ! image_exists "$image_name"; then
+        log_warn "Image $image_name not found, building..."
         cmd_build "$project_dir"
     fi
 
-    # Ensure Claude config directory exists with proper subdirs
-    mkdir -p "$CLAUDE_CONFIG"
-    mkdir -p "$CLAUDE_CONFIG/debug"
+    # Ensure config directory exists
+    mkdir -p "$config_dir"
 
-    # Ensure .claude.json exists (Claude creates this for settings)
-    touch "$HOME/.claude.json" 2>/dev/null || true
+    log_info "Starting container $container_name for $project_dir (backend: $backend)"
 
-    log_info "Starting container $container_name for $project_dir"
-
+    local config_basename
+    config_basename=$(basename "$config_dir")
+    
     local run_args=(
         -d
         --name "$container_name"
         -v "$project_dir:/workspace:Z"
-        -v "$CLAUDE_CONFIG:/home/claude/.claude:Z"
+        -v "$config_dir:/home/claude/$config_basename:Z"
         -w /workspace
         -e "TERM=${TERM:-xterm-256color}"
     )
@@ -610,8 +717,8 @@ cmd_start() {
     # Podman rootless mode needs userns mapping
     run_args+=(--userns=keep-id)
 
-    # Mount .claude.json if it exists
-    if [[ -f "$HOME/.claude.json" ]]; then
+    # Mount .claude.json if it exists (Claude-specific)
+    if [[ "$backend" == "claude" && -f "$HOME/.claude.json" ]]; then
         run_args+=(-v "$HOME/.claude.json:/home/claude/.claude.json:Z")
     fi
 
@@ -623,10 +730,10 @@ cmd_start() {
         )
     fi
 
-    $ENGINE run "${run_args[@]}" "$IMAGE_NAME" sleep infinity
+    $ENGINE run "${run_args[@]}" "$image_name" sleep infinity
 
     # Fix permissions on mounted directories (needed for macOS/Podman VM)
-    $ENGINE exec "$container_name" sh -c "sudo chown -R claude:claude /home/claude/.claude 2>/dev/null || true"
+    $ENGINE exec "$container_name" sh -c "sudo chown -R claude:claude /home/claude/$config_basename 2>/dev/null || true"
 
     # Pass through git config from host
     local git_name git_email
@@ -661,14 +768,14 @@ cmd_start() {
                 lang="all"
             fi
         fi
-        setup_container_firewall "$container_name" "$lang"
+        setup_container_firewall "$container_name" "$lang" "$backend"
     else
         log_warn "Network restrictions disabled - container has full internet access"
     fi
 
     log_info "Container $container_name started"
     log_info "Run '$0 shell $project_dir' to get a shell"
-    log_info "Run '$0 claude $project_dir' to start Claude Code"
+    log_info "Run '$0 code $project_dir' to start the AI assistant"
 }
 
 # Get a shell in the container
@@ -688,8 +795,8 @@ cmd_shell() {
     $ENGINE exec -it "$container_name" bash
 }
 
-# Run Claude Code directly
-cmd_claude() {
+# Run AI coding assistant directly
+cmd_code() {
     local ports=()
     local project_dir=""
     local open_network=false
@@ -724,6 +831,13 @@ cmd_claude() {
     local container_name
     container_name=$(container_name_for_project "$project_dir")
 
+    # Read backend from stored file
+    local backend="claude"
+    local backend_file="$project_dir/.devcontainer/.backend"
+    if [[ -f "$backend_file" ]]; then
+        backend=$(cat "$backend_file")
+    fi
+
     # Start if not running, passing port and network args
     if ! container_running "$container_name"; then
         local start_args=()
@@ -740,9 +854,18 @@ cmd_claude() {
         log_warn "Run '$0 stop $project_dir' first to apply changes"
     fi
 
-    log_info "Starting Claude Code in $container_name"
-    log_warn "Running with --dangerously-skip-permissions (container provides isolation)"
-    $ENGINE exec -it "$container_name" /home/claude/.local/bin/claude --dangerously-skip-permissions
+    # Run the appropriate backend
+    case "$backend" in
+        claude)
+            log_info "Starting Claude Code in $container_name"
+            log_warn "Running with --dangerously-skip-permissions (container provides isolation)"
+            $ENGINE exec -it "$container_name" /home/claude/.local/bin/claude --dangerously-skip-permissions
+            ;;
+        opencode)
+            log_info "Starting OpenCode in $container_name"
+            $ENGINE exec -it "$container_name" /home/claude/go/bin/opencode
+            ;;
+    esac
 }
 
 # Stop and remove the container
@@ -762,10 +885,10 @@ cmd_stop() {
     fi
 }
 
-# Show status of all claude-dev containers
+# Show status of all ai-dev containers
 cmd_status() {
-    log_info "Claude dev containers:"
-    $ENGINE ps -a --filter "name=claude-dev-" --format "table {{.Names}}\t{{.Status}}\t{{.Mounts}}"
+    log_info "AI dev containers:"
+    $ENGINE ps -a --filter "name=ai-dev-" --format "table {{.Names}}\t{{.Status}}\t{{.Mounts}}"
 }
 
 # Show usage
@@ -778,53 +901,54 @@ Commands:
   build   Build the container image
   start   Start a container for the project
   shell   Get a shell in the running container
-  claude  Run Claude Code directly (with --dangerously-skip-permissions)
+  code    Run the AI coding assistant directly
   stop    Stop and remove the container
-  status  List all claude-dev containers
-  langs   List supported languages
+  status  List all ai-dev containers
+  langs   List supported languages and backends
 
 Options for init:
   --lang, -l LANG       Language environment (default: base)
                         Supported: base, go, rust, python, node, emacs, all
+  --backend, -b BACKEND AI backend (default: claude)
+                        Supported: claude, opencode
 
-Options for start/claude:
+Options for start/code:
   --port, -p PORT       Forward a port (HOST:CONTAINER format)
                         Can be specified multiple times
   --open-network, -O    Disable firewall restrictions (allow full internet access)
-                        By default, network is restricted to essential domains:
-                        Claude API, GitHub, and package registries for your language
+                        By default, network is restricted to essential domains
 
 General options:
   project-dir   Path to the project (default: current directory)
 
 Environment variables:
-  CLAUDE_DEVCONTAINER_ENGINE   Container engine (default: podman)
-  CLAUDE_DEVCONTAINER_IMAGE    Image name (default: claude-devcontainer)
-  CLAUDE_CONFIG_DIR            Claude config directory (default: ~/.claude)
+  AI_DEVCONTAINER_ENGINE   Container engine (default: podman)
+  AI_DEVCONTAINER_IMAGE    Override image name
 
 Examples:
-  # Initialize with a specific language
+  # Initialize with Claude Code (default)
   $(basename "$0") init --lang go ~/projects/mygoapp
-  $(basename "$0") init --lang rust ~/projects/rustproj
   $(basename "$0") init --lang python .
-  $(basename "$0") init --lang emacs ~/projects/my-emacs-pkg
+
+  # Initialize with OpenCode
+  $(basename "$0") init --backend opencode --lang node ~/projects/webapp
+  $(basename "$0") init -b opencode -l rust .
 
   # Build and run (network restricted by default)
   $(basename "$0") build ~/projects/mygoapp
-  $(basename "$0") claude ~/projects/mygoapp
+  $(basename "$0") code ~/projects/mygoapp
 
   # Start with port forwarding for web development
   $(basename "$0") start --port 3000:3000 --port 8080:8080 .
-  $(basename "$0") claude -p 3000:3000 ~/projects/webapp
+  $(basename "$0") code -p 3000:3000 ~/projects/webapp
 
   # Run with unrestricted network access (less secure)
-  $(basename "$0") claude --open-network .
-  $(basename "$0") claude -O -p 3000:3000 ~/projects/webapp
+  $(basename "$0") code --open-network .
 
   # Quick start in current directory
   $(basename "$0") init
   $(basename "$0") build
-  $(basename "$0") claude
+  $(basename "$0") code
 EOF
 }
 
@@ -847,9 +971,9 @@ main() {
         shell)
             cmd_shell "${2:-}"
             ;;
-        claude)
+        code)
             shift
-            cmd_claude "$@"
+            cmd_code "$@"
             ;;
         stop)
             cmd_stop "${2:-}"
