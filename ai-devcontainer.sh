@@ -94,19 +94,19 @@ lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $
 
 # Language-specific environment variables
 lang_env_base=""
-lang_env_go="ENV GOPATH=/home/claude/go
-ENV PATH=\$PATH:/home/claude/go/bin"
-lang_env_rust="ENV CARGO_HOME=/home/claude/.cargo
-ENV PATH=\$PATH:/home/claude/.cargo/bin"
+lang_env_go="ENV GOPATH=/home/ai/go
+ENV PATH=\$PATH:/home/ai/go/bin"
+lang_env_rust="ENV CARGO_HOME=/home/ai/.cargo
+ENV PATH=\$PATH:/home/ai/.cargo/bin"
 lang_env_python=""
-lang_env_node="ENV PNPM_HOME=/home/claude/.local/share/pnpm
+lang_env_node="ENV PNPM_HOME=/home/ai/.local/share/pnpm
 ENV PATH=\$PNPM_HOME:\$PATH"
 lang_env_emacs=""
 lang_env_all="$lang_env_go
 $lang_env_rust
 $lang_env_node"
 
-# Language-specific post-install commands (run as claude user)
+# Language-specific post-install commands (run as ai user)
 lang_postinstall_base=""
 lang_postinstall_go=""
 lang_postinstall_rust=""
@@ -455,8 +455,8 @@ RUN curl -fsSL https://claude.ai/install.sh | bash || \
     (sleep 5 && curl -fsSL https://claude.ai/install.sh | bash --force)
 
 # Add Claude to PATH (installed to ~/.local/bin)
-ENV PATH="/home/claude/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-RUN echo '"'"'export PATH="/home/claude/.local/bin:$PATH"'"'"' >> /home/claude/.bashrc'
+ENV PATH="/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+RUN echo '"'"'export PATH="/home/ai/.local/bin:$PATH"'"'"' >> /home/ai/.bashrc'
             ;;
         opencode)
             backend_name="OpenCode"
@@ -465,13 +465,13 @@ RUN curl -fsSL https://go.dev/dl/go1.24.3.linux-amd64.tar.gz | sudo tar -C /usr/
 
 # Set up Go environment
 ENV GOROOT=/usr/local/go
-ENV GOPATH=/home/claude/go
-ENV PATH="/home/claude/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV GOPATH=/home/ai/go
+ENV PATH="/home/ai/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Install OpenCode
 RUN go install github.com/opencode-ai/opencode@latest
 
-RUN echo '"'"'export PATH="/home/claude/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /home/claude/.bashrc'
+RUN echo '"'"'export PATH="/home/ai/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /home/ai/.bashrc'
             # OpenCode installs its own Go, don't add Alpine's go package
             ;;
     esac
@@ -511,7 +511,7 @@ RUN apk add --no-cache \\
     bind-tools
 $apk_extras
 # Set up non-root user
-ARG USERNAME=claude
+ARG USERNAME=ai
 ARG USER_UID=1000
 ARG USER_GID=\$USER_UID
 
@@ -522,17 +522,17 @@ RUN addgroup -g \$USER_GID \$USERNAME \\
 # Create workspace directory
 RUN mkdir -p /workspace && chown \$USER_UID:\$USER_GID /workspace
 
-# Switch to claude user for installations
+# Switch to ai user for installations
 USER \$USERNAME
 WORKDIR /home/\$USERNAME
 
 $backend_install
 
 # Pre-populate SSH known_hosts with GitHub keys to avoid fingerprint prompts
-RUN /bin/mkdir -p /home/claude/.ssh && \\
-    /usr/bin/ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/claude/.ssh/known_hosts 2>/dev/null && \\
-    /bin/chmod 700 /home/claude/.ssh && \\
-    /bin/chmod 600 /home/claude/.ssh/known_hosts
+RUN /bin/mkdir -p /home/ai/.ssh && \\
+    /usr/bin/ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/ai/.ssh/known_hosts 2>/dev/null && \\
+    /bin/chmod 700 /home/ai/.ssh && \\
+    /bin/chmod 600 /home/ai/.ssh/known_hosts
 $postinstall_extras
 # Set environment
 ENV SHELL=/bin/bash
@@ -553,9 +553,9 @@ DOCKERFILE
     "dockerfile": "Dockerfile"
   },
   "workspaceFolder": "/workspace",
-  "remoteUser": "claude",
+  "remoteUser": "ai",
   "mounts": [
-    "source=\${localEnv:HOME}/$config_dir,target=/home/claude/$config_dir,type=bind"
+    "source=\${localEnv:HOME}/$config_dir,target=/home/ai/$config_dir,type=bind"
   ],
   "containerEnv": {
     "EDITOR": "mg",
@@ -696,7 +696,7 @@ cmd_start() {
         -d
         --name "$container_name"
         -v "$project_dir:/workspace:Z"
-        -v "$config_dir:/home/claude/$config_basename:Z"
+        -v "$config_dir:/home/ai/$config_basename:Z"
         -w /workspace
         -e "TERM=${TERM:-xterm-256color}"
     )
@@ -717,7 +717,7 @@ cmd_start() {
 
     # Mount .claude.json if it exists (Claude-specific)
     if [[ "$backend" == "claude" && -f "$HOME/.claude.json" ]]; then
-        run_args+=(-v "$HOME/.claude.json:/home/claude/.claude.json:Z")
+        run_args+=(-v "$HOME/.claude.json:/home/ai/.claude.json:Z")
     fi
 
     # Add any SSH agent socket for git operations
@@ -731,7 +731,7 @@ cmd_start() {
     $ENGINE run "${run_args[@]}" "$image_name" sleep infinity
 
     # Fix permissions on mounted directories (needed for macOS/Podman VM)
-    $ENGINE exec "$container_name" sh -c "sudo chown -R claude:claude /home/claude/$config_basename 2>/dev/null || true"
+    $ENGINE exec "$container_name" sh -c "sudo chown -R ai:ai /home/ai/$config_basename 2>/dev/null || true"
 
     # Pass through git config from host
     local git_name git_email
@@ -857,11 +857,11 @@ cmd_code() {
         claude)
             log_info "Starting Claude Code in $container_name"
             log_warn "Running with --dangerously-skip-permissions (container provides isolation)"
-            $ENGINE exec -it "$container_name" /home/claude/.local/bin/claude --dangerously-skip-permissions
+            $ENGINE exec -it "$container_name" /home/ai/.local/bin/claude --dangerously-skip-permissions
             ;;
         opencode)
             log_info "Starting OpenCode in $container_name"
-            $ENGINE exec -it "$container_name" /home/claude/go/bin/opencode
+            $ENGINE exec -it "$container_name" /home/ai/go/bin/opencode
             ;;
     esac
 }
