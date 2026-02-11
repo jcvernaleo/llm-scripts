@@ -460,21 +460,19 @@ RUN echo '"'"'export PATH="/home/claude/.local/bin:$PATH"'"'"' >> /home/claude/.
             ;;
         opencode)
             backend_name="OpenCode"
-            backend_install='# Install OpenCode via go install
+            backend_install='# Install Go 1.24+ (required by OpenCode, Alpine only has 1.23)
+RUN curl -fsSL https://go.dev/dl/go1.24.3.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
+
+# Set up Go environment
+ENV GOROOT=/usr/local/go
+ENV GOPATH=/home/claude/go
+ENV PATH="/home/claude/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Install OpenCode
 RUN go install github.com/opencode-ai/opencode@latest
 
-# Add Go bin to PATH
-ENV PATH="/home/claude/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-RUN echo '"'"'export PATH="/home/claude/go/bin:$PATH"'"'"' >> /home/claude/.bashrc'
-            # OpenCode requires Go
-            if [[ "$lang" != "go" && "$lang" != "all" ]]; then
-                apk_extras="
-# Go (required for OpenCode)
-RUN apk add --no-cache go
-$apk_extras"
-                env_extras="ENV GOPATH=/home/claude/go
-$env_extras"
-            fi
+RUN echo '"'"'export PATH="/home/claude/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /home/claude/.bashrc'
+            # OpenCode installs its own Go, don't add Alpine's go package
             ;;
     esac
 
