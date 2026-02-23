@@ -13,7 +13,7 @@
 #   ai-devcontainer.sh langs
 #
 # Supported languages for --lang:
-#   base, go, rust, python, node, emacs, all
+#   base, go, rust, python, node, emacs, solidity, all
 #
 # Supported backends for --backend:
 #   claude    Claude Code (default) - Anthropic's AI coding assistant
@@ -30,6 +30,12 @@
 #   AI_DEVCONTAINER_ENGINE   Container engine to use (default: podman)
 #   AI_DEVCONTAINER_IMAGE    Image name (default: ai-devcontainer-claude or ai-devcontainer-opencode)
 #
+# API keys (passed through to container if set):
+#   ANTHROPIC_API_KEY        For Claude Code and OpenCode with Anthropic
+#   OPENAI_API_KEY           For OpenCode with OpenAI
+#   GOOGLE_API_KEY           For OpenCode with Google
+#   GROQ_API_KEY             For OpenCode with Groq
+#   OPENROUTER_API_KEY       For OpenCode with OpenRouter
 #
 
 set -euo pipefail
@@ -90,6 +96,7 @@ lang_packages_rust="rust cargo"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
+lang_packages_solidity=""
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_node $lang_packages_emacs"
 
 # Language-specific environment variables
@@ -102,9 +109,11 @@ lang_env_python=""
 lang_env_node="ENV PNPM_HOME=/home/ai/.local/share/pnpm
 ENV PATH=\$PNPM_HOME:\$PATH"
 lang_env_emacs=""
+lang_env_solidity="ENV PATH=/home/ai/.foundry/bin:\$PATH"
 lang_env_all="$lang_env_go
 $lang_env_rust
-$lang_env_node"
+$lang_env_node
+$lang_env_solidity"
 
 # Language-specific post-install commands (run as ai user)
 lang_postinstall_base=""
@@ -113,7 +122,11 @@ lang_postinstall_rust=""
 lang_postinstall_python=""
 lang_postinstall_node="RUN wget -qO- https://get.pnpm.io/install.sh | ENV=\"\$HOME/.bashrc\" SHELL=/bin/bash sh -"
 lang_postinstall_emacs=""
-lang_postinstall_all="$lang_postinstall_node"
+lang_postinstall_solidity='RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /home/ai/.foundry/bin/foundryup && \
+    echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc'
+lang_postinstall_all="$lang_postinstall_node
+$lang_postinstall_solidity"
 
 # Firewall allowed domains (base domains always allowed)
 FIREWALL_DOMAINS_BASE=(
@@ -181,6 +194,18 @@ FIREWALL_DOMAINS_EMACS=(
     "elpa.nongnu.org"
 )
 
+FIREWALL_DOMAINS_SOLIDITY=(
+    # Foundry
+    "foundry.paradigm.xyz"
+    # Ethereum RPC endpoints
+    "eth.merkle.io"
+    "cloudflare-eth.com"
+    "rpc.ankr.com"
+    # Etherscan for verification
+    "api.etherscan.io"
+    "etherscan.io"
+)
+
 # Get firewall domains for a language and backend
 get_firewall_domains() {
     local lang="$1"
@@ -214,12 +239,16 @@ get_firewall_domains() {
         emacs)
             domains+=("${FIREWALL_DOMAINS_EMACS[@]}")
             ;;
+        solidity)
+            domains+=("${FIREWALL_DOMAINS_SOLIDITY[@]}")
+            ;;
         all)
             domains+=("${FIREWALL_DOMAINS_GO[@]}")
             domains+=("${FIREWALL_DOMAINS_RUST[@]}")
             domains+=("${FIREWALL_DOMAINS_PYTHON[@]}")
             domains+=("${FIREWALL_DOMAINS_NODE[@]}")
             domains+=("${FIREWALL_DOMAINS_EMACS[@]}")
+            domains+=("${FIREWALL_DOMAINS_SOLIDITY[@]}")
             ;;
     esac
     
@@ -334,7 +363,8 @@ Supported languages for --lang:
   python   Base + Python 3 + pip + virtualenv
   node     Base + Node.js + npm + pnpm
   emacs    Base + Emacs (for elisp development)
-  all      Everything: Go + Rust + Python + Node.js/pnpm + Emacs
+  solidity Base + Foundry (forge, cast, anvil, chisel)
+  all      Everything: Go + Rust + Python + Node.js/pnpm + Emacs + Foundry
 
 Supported backends for --backend:
 
@@ -343,6 +373,7 @@ Supported backends for --backend:
 
 Examples:
   ai-devcontainer.sh init --lang go ~/projects/mygoapp
+  ai-devcontainer.sh init --lang solidity ~/projects/mycontract
   ai-devcontainer.sh init --lang node --backend opencode ~/projects/webapp
   ai-devcontainer.sh init --backend opencode --lang python .
 EOF
@@ -385,7 +416,7 @@ cmd_init() {
 
     # Validate language
     case "$lang" in
-        base|go|rust|python|node|emacs|all) ;;
+        base|go|rust|python|node|emacs|solidity|all) ;;
         *)
             log_error "Unknown language: $lang"
             log_error "Run '$0 langs' to see supported languages"
@@ -701,6 +732,13 @@ cmd_start() {
         -e "TERM=${TERM:-xterm-256color}"
     )
 
+    # Pass through API keys if set
+    [[ -n "${ANTHROPIC_API_KEY:-}" ]] && run_args+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
+    [[ -n "${OPENAI_API_KEY:-}" ]] && run_args+=(-e "OPENAI_API_KEY=$OPENAI_API_KEY")
+    [[ -n "${GOOGLE_API_KEY:-}" ]] && run_args+=(-e "GOOGLE_API_KEY=$GOOGLE_API_KEY")
+    [[ -n "${GROQ_API_KEY:-}" ]] && run_args+=(-e "GROQ_API_KEY=$GROQ_API_KEY")
+    [[ -n "${OPENROUTER_API_KEY:-}" ]] && run_args+=(-e "OPENROUTER_API_KEY=$OPENROUTER_API_KEY")
+
     # Add port mappings
     for port in "${ports[@]}"; do
         run_args+=(-p "$port")
@@ -760,6 +798,8 @@ cmd_start() {
                 lang="rust"
             elif grep -q "^RUN apk add.*\bemacs\b" "$dockerfile"; then
                 lang="emacs"
+            elif grep -q "foundry" "$dockerfile"; then
+                lang="solidity"
             fi
             # Check for "all"
             if grep -q "nodejs" "$dockerfile" && grep -q "python3" "$dockerfile"; then
@@ -906,7 +946,7 @@ Commands:
 
 Options for init:
   --lang, -l LANG       Language environment (default: base)
-                        Supported: base, go, rust, python, node, emacs, all
+                        Supported: base, go, rust, python, node, emacs, solidity, all
   --backend, -b BACKEND AI backend (default: claude)
                         Supported: claude, opencode
 
@@ -926,6 +966,7 @@ Environment variables:
 Examples:
   # Initialize with Claude Code (default)
   $(basename "$0") init --lang go ~/projects/mygoapp
+  $(basename "$0") init --lang solidity ~/projects/mycontract
   $(basename "$0") init --lang python .
 
   # Initialize with OpenCode
