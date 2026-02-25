@@ -5,6 +5,7 @@
 # Usage:
 #   ai-devcontainer.sh init [--lang LANG] [--backend BACKEND] [project-dir]
 #   ai-devcontainer.sh build [project-dir]
+#   ai-devcontainer.sh update [project-dir]
 #   ai-devcontainer.sh start [--port PORT]... [--open-network] [project-dir]
 #   ai-devcontainer.sh shell [project-dir]
 #   ai-devcontainer.sh code [--port PORT]... [--open-network] [project-dir]
@@ -646,6 +647,55 @@ cmd_build() {
     log_info "Image $image_name built successfully"
 }
 
+# Update (rebuild) the container image with no cache
+cmd_update() {
+    local project_dir
+    project_dir=$(get_project_dir "${1:-.}")
+    local dockerfile="$project_dir/.devcontainer/Dockerfile"
+    local backend_file="$project_dir/.devcontainer/.backend"
+
+    if [[ ! -f "$dockerfile" ]]; then
+        log_error "No Dockerfile found at $dockerfile"
+        log_error "Run '$0 init $project_dir' first"
+        exit 1
+    fi
+
+    # Read backend from stored file
+    local backend="claude"
+    if [[ -f "$backend_file" ]]; then
+        backend=$(cat "$backend_file")
+    fi
+    
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+    local container_name
+    container_name=$(container_name_for_project "$project_dir")
+
+    # Stop container if running
+    if container_running "$container_name"; then
+        log_info "Stopping container $container_name"
+        $ENGINE stop "$container_name" 2>/dev/null || true
+        $ENGINE rm "$container_name" 2>/dev/null || true
+    fi
+
+    # Check current image age
+    local image_created
+    image_created=$($ENGINE image inspect "$image_name" --format '{{.Created}}' 2>/dev/null || echo "unknown")
+    if [[ "$image_created" != "unknown" ]]; then
+        log_info "Current image created: $image_created"
+    fi
+
+    log_info "Rebuilding image $image_name (no cache)"
+    $ENGINE build \
+        --no-cache \
+        --pull \
+        -t "$image_name" \
+        -f "$dockerfile" \
+        "$project_dir/.devcontainer"
+
+    log_info "Image $image_name updated successfully"
+    log_info "Run '$0 code $project_dir' to start with the new image"
+}
+
 # Start a container for the project
 cmd_start() {
     local ports=()
@@ -937,6 +987,7 @@ Usage: $(basename "$0") <command> [options] [project-dir]
 Commands:
   init    Initialize a .devcontainer directory in a project
   build   Build the container image
+  update  Rebuild image from scratch (no cache, pulls latest base)
   start   Start a container for the project
   shell   Get a shell in the running container
   code    Run the AI coding assistant directly
@@ -1002,6 +1053,9 @@ main() {
             ;;
         build)
             cmd_build "${2:-}"
+            ;;
+        update)
+            cmd_update "${2:-}"
             ;;
         start)
             shift
