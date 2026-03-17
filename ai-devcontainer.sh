@@ -482,12 +482,13 @@ $extra_postinstall"
     case "$backend" in
         claude)
             backend_name="Claude Code"
-            backend_install='# Install Claude Code via native installer (with retry)
-RUN curl -fsSL https://claude.ai/install.sh | bash || \
-    (sleep 5 && curl -fsSL https://claude.ai/install.sh | bash --force)
+            backend_install='# Install Claude Code via npm (native installer binary is incompatible with Alpine musl)
+RUN npm install -g --prefix /home/ai/.local @anthropic-ai/claude-code
 
 # Add Claude to PATH (installed to ~/.local/bin)
 ENV PATH="/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Use system ripgrep (required on Alpine/musl)
+ENV USE_BUILTIN_RIPGREP=0
 RUN echo '"'"'export PATH="/home/ai/.local/bin:$PATH"'"'"' >> /home/ai/.bashrc'
             ;;
         opencode)
@@ -510,7 +511,7 @@ RUN echo '"'"'export PATH="/home/ai/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /hom
 
     # Create Dockerfile
     cat > "$devcontainer_dir/Dockerfile" << DOCKERFILE
-FROM alpine:3.21
+FROM alpine:3.22
 
 # Backend: $backend_name
 
@@ -537,7 +538,10 @@ RUN apk add --no-cache \\
     mg \\
     github-cli \\
     gcompat \\
+    libgcc \\
     libstdc++ \\
+    nodejs \\
+    npm \\
     iptables \\
     ip6tables \\
     bind-tools
