@@ -6,7 +6,7 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
-- **`commands/`** — Custom Claude Code slash commands for session state persistence.
+- **`commands/`** — Custom Claude Code slash commands for session state persistence and workspace scaffolding.
 
 ---
 
@@ -119,8 +119,22 @@ The `commands/` directory contains custom slash command definitions to install i
 | `/resume` | Reload context from the last saved session and suggest next steps |
 | `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
 | `/sessions` | List recent sessions across all projects |
+| `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
 
 Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
+
+### `/new-workspace`
+
+Bootstraps a new umbrella workspace for managing multiple related repos together:
+
+- Initializes a git repo with a standard `.gitignore`
+- Creates `repos.txt` for listing component repo URLs (used by `clone-all.sh`)
+- Creates `PLAN.md` (goal, components table, architecture, milestones, decisions log)
+- Creates `TODO.md` for cross-repo task tracking
+- Creates a `repos/` directory (gitignored) for cloned components
+- Makes an initial commit
+
+Usage: run `/new-workspace <project-name>` in an empty directory. If no name is given, it will prompt you.
 
 To install the commands:
 
