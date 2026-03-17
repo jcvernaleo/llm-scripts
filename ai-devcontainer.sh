@@ -138,6 +138,12 @@ FIREWALL_DOMAINS_BASE=(
     "objects.githubusercontent.com"
     "codeload.github.com"
     "ssh.github.com"
+    # Alpine Linux
+    "alpinelinux.org"
+    "dl-cdn.alpinelinux.org"
+    # Go
+    "go.dev"
+    "dl.google.com"
 )
 
 # Claude Code specific domains
@@ -162,12 +168,26 @@ FIREWALL_DOMAINS_BACKEND_OPENCODE=(
     "api.groq.com"
     # OpenRouter
     "openrouter.ai"
+    # Go modules (OpenCode itself requires Go)
+    "proxy.golang.org"
+    "sum.golang.org"
+    "storage.googleapis.com"
+    # Google CDN CIDRs for Go module proxy (same as FIREWALL_DOMAINS_GO)
+    "142.250.0.0/15"
+    "173.194.0.0/16"
+    "74.125.0.0/16"
 )
 
 FIREWALL_DOMAINS_GO=(
     "proxy.golang.org"
     "sum.golang.org"
     "storage.googleapis.com"
+    # Google CDN CIDRs: proxy.golang.org and storage.googleapis.com use Google's CDN
+    # which rotates across IPs in these registered Google-owned blocks. Allowing by
+    # CIDR is more reliable than resolving at startup.
+    "142.250.0.0/15"
+    "173.194.0.0/16"
+    "74.125.0.0/16"
 )
 
 FIREWALL_DOMAINS_RUST=(
@@ -302,19 +322,29 @@ FIREWALL_HEADER
     cat << 'FIREWALL_FOOTER'
 )
 
-# Resolve and allow each domain
-for domain in "${ALLOWED_DOMAINS[@]}"; do
-    # Get IPv4 addresses
-    ips=$(dig +short A "$domain" 2>/dev/null | grep -E '^[0-9]+\.' || true)
-    for ip in $ips; do
-        iptables -A OUTPUT -d "$ip" -j ACCEPT 2>/dev/null || true
-    done
-    
-    # Get IPv6 addresses
-    ip6s=$(dig +short AAAA "$domain" 2>/dev/null | grep -E '^[0-9a-f:]+$' || true)
-    for ip6 in $ip6s; do
-        ip6tables -A OUTPUT -d "$ip6" -j ACCEPT 2>/dev/null || true
-    done
+# Resolve and allow each domain (or CIDR block)
+# Entries containing '/' are treated as CIDRs and added directly.
+# Domain names are resolved via DNS.
+for entry in "${ALLOWED_DOMAINS[@]}"; do
+    if [[ "$entry" == */* ]]; then
+        # CIDR block — add directly
+        if [[ "$entry" == *:* ]]; then
+            ip6tables -A OUTPUT -d "$entry" -j ACCEPT 2>/dev/null || true
+        else
+            iptables -A OUTPUT -d "$entry" -j ACCEPT 2>/dev/null || true
+        fi
+    else
+        # Domain name — resolve to IPs
+        ips=$(dig +short A "$entry" 2>/dev/null | grep -E '^[0-9]+\.' || true)
+        for ip in $ips; do
+            iptables -A OUTPUT -d "$ip" -j ACCEPT 2>/dev/null || true
+        done
+
+        ip6s=$(dig +short AAAA "$entry" 2>/dev/null | grep -E '^[0-9a-f:]+$' || true)
+        for ip6 in $ip6s; do
+            ip6tables -A OUTPUT -d "$ip6" -j ACCEPT 2>/dev/null || true
+        done
+    fi
 done
 
 # Allow SSH (port 22) for git operations
@@ -334,6 +364,7 @@ echo "Firewall configured. Allowed domains:"
 printf '  %s\n' "${ALLOWED_DOMAINS[@]}"
 FIREWALL_FOOTER
 }
+
 
 # Setup firewall in container
 setup_container_firewall() {
@@ -493,8 +524,8 @@ RUN echo '"'"'export PATH="/home/ai/.local/bin:$PATH"'"'"' >> /home/ai/.bashrc'
             ;;
         opencode)
             backend_name="OpenCode"
-            backend_install='# Install Go 1.24+ (required by OpenCode, Alpine only has 1.23)
-RUN curl -fsSL https://go.dev/dl/go1.24.3.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
+            backend_install='# Install Go 1.25+ (required by OpenCode)
+RUN curl -fsSL https://go.dev/dl/go1.25.8.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
 
 # Set up Go environment
 ENV GOROOT=/usr/local/go
@@ -511,7 +542,7 @@ RUN echo '"'"'export PATH="/home/ai/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /hom
 
     # Create Dockerfile
     cat > "$devcontainer_dir/Dockerfile" << DOCKERFILE
-FROM alpine:3.22
+FROM alpine:3.23
 
 # Backend: $backend_name
 
@@ -600,8 +631,9 @@ DOCKERFILE
 }
 DEVCONTAINER
 
-    # Store backend choice for later commands
+    # Store backend and lang choice for later commands
     echo "$backend" > "$devcontainer_dir/.backend"
+    echo "$lang" > "$devcontainer_dir/.lang"
 
     # Create .gitignore additions
     cat > "$devcontainer_dir/.gitignore" << 'GITIGNORE'
@@ -838,27 +870,10 @@ cmd_start() {
 
     # Set up firewall by default (unless --open-network)
     if [[ "$open_network" != "true" ]]; then
-        # Detect language from Dockerfile
         local lang="base"
-        local dockerfile="$project_dir/.devcontainer/Dockerfile"
-        if [[ -f "$dockerfile" ]]; then
-            if grep -q "nodejs" "$dockerfile"; then
-                lang="node"
-            elif grep -q "^RUN apk add.*python3" "$dockerfile"; then
-                lang="python"
-            elif grep -q "^RUN apk add.*\bgo\b" "$dockerfile"; then
-                lang="go"
-            elif grep -q "^RUN apk add.*rust" "$dockerfile"; then
-                lang="rust"
-            elif grep -q "^RUN apk add.*\bemacs\b" "$dockerfile"; then
-                lang="emacs"
-            elif grep -q "foundry" "$dockerfile"; then
-                lang="solidity"
-            fi
-            # Check for "all"
-            if grep -q "nodejs" "$dockerfile" && grep -q "python3" "$dockerfile"; then
-                lang="all"
-            fi
+        local lang_file="$project_dir/.devcontainer/.lang"
+        if [[ -f "$lang_file" ]]; then
+            lang=$(cat "$lang_file")
         fi
         setup_container_firewall "$container_name" "$lang" "$backend"
     else

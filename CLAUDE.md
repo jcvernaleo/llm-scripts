@@ -33,6 +33,7 @@ This repository contains shell scripts and configuration for managing isolated A
 The main script dynamically generates a Dockerfile at `init` time and embeds it in `.devcontainer/Dockerfile`. Key design patterns:
 
 - **Backend abstraction**: `claude` (default) or `opencode`. Backend is persisted to `.devcontainer/.backend` and read on subsequent commands.
+- **Language persistence**: The `--lang` choice is persisted to `.devcontainer/.lang` at `init` time and read at `start` time to configure the firewall correctly.
 - **Network firewall**: Default-deny iptables rules are applied inside the container at start time. Allowed domains are assembled from base + backend-specific + language-specific domain arrays defined at the top of the script (`FIREWALL_DOMAINS_*`). Use `--open-network` to disable.
 - **Language modularity**: Language environments (`--lang`) add Alpine packages, ENV variables, and post-install RUN steps via parallel arrays (`lang_packages_*`, `lang_env_*`, `lang_postinstall_*`).
 - **Container naming**: Derived from the project directory basename via `container_name_for_project()`.

@@ -61,7 +61,7 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 | `claude` | Claude Code — Anthropic's AI coding assistant (default) |
 | `opencode` | OpenCode — open-source, supports Anthropic, OpenAI, Google, Groq, OpenRouter |
 
-The selected backend is saved to `.devcontainer/.backend` and used automatically on subsequent commands.
+The selected backend and language are saved to `.devcontainer/.backend` and `.devcontainer/.lang` and used automatically on subsequent commands.
 
 ### Network firewall
 
