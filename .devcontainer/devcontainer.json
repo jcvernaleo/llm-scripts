@@ -1,0 +1,15 @@
+{
+  "name": "Claude Code Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspace",
+  "remoteUser": "ai",
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/ai/.claude,type=bind"
+  ],
+  "containerEnv": {
+    "EDITOR": "mg",
+    "VISUAL": "mg"
+  }
+}
