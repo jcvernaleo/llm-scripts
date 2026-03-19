@@ -33,7 +33,7 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 |---------|-------------|
 | `init [--lang LANG] [--backend BACKEND] [dir]` | Create `.devcontainer/` with a generated Dockerfile |
 | `build [dir]` | Build the container image |
-| `update [dir]` | Rebuild from scratch (no cache, pulls latest base) |
+| `update [dir]` | Regenerate Dockerfile, then rebuild from scratch (no cache, pulls latest base) |
 | `start [--port HOST:CONTAINER]... [--open-network] [dir]` | Start container |
 | `code [--port HOST:CONTAINER]... [--open-network] [dir]` | Start container and launch the AI assistant |
 | `shell [dir]` | Open an interactive shell in the running container |

@@ -92,8 +92,8 @@ get_project_dir() {
 
 # Language-specific package lists
 lang_packages_base=""
-lang_packages_go="go"
-lang_packages_rust="rust cargo"
+lang_packages_go="go make"
+lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
@@ -411,68 +411,11 @@ Examples:
 EOF
 }
 
-# Initialize a .devcontainer directory in a project
-cmd_init() {
-    local lang="base"
-    local backend="$DEFAULT_BACKEND"
-    local project_dir=""
-
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --lang|-l)
-                lang="$2"
-                shift 2
-                ;;
-            --lang=*)
-                lang="${1#*=}"
-                shift
-                ;;
-            --backend|-b)
-                backend="$2"
-                shift 2
-                ;;
-            --backend=*)
-                backend="${1#*=}"
-                shift
-                ;;
-            *)
-                project_dir="$1"
-                shift
-                ;;
-        esac
-    done
-
-    project_dir=$(get_project_dir "${project_dir:-.}")
-    local devcontainer_dir="$project_dir/.devcontainer"
-
-    # Validate language
-    case "$lang" in
-        base|go|rust|python|node|emacs|solidity|all) ;;
-        *)
-            log_error "Unknown language: $lang"
-            log_error "Run '$0 langs' to see supported languages"
-            exit 1
-            ;;
-    esac
-
-    # Validate backend
-    case "$backend" in
-        claude|opencode) ;;
-        *)
-            log_error "Unknown backend: $backend"
-            log_error "Supported: claude, opencode"
-            exit 1
-            ;;
-    esac
-
-    if [[ -d "$devcontainer_dir" ]]; then
-        log_error "Directory $devcontainer_dir already exists"
-        exit 1
-    fi
-
-    log_info "Creating .devcontainer in $project_dir (language: $lang, backend: $backend)"
-    mkdir -p "$devcontainer_dir"
+# Generate Dockerfile for a given lang/backend into devcontainer_dir
+generate_dockerfile() {
+    local lang="$1"
+    local backend="$2"
+    local devcontainer_dir="$3"
 
     # Get language-specific additions
     local lang_packages_var="lang_packages_$lang"
@@ -609,10 +552,10 @@ $extra_env
 WORKDIR /workspace
 DOCKERFILE
 
-    # Create a simple devcontainer.json for reference
+    # Create devcontainer.json
     local config_dir=".claude"
     [[ "$backend" == "opencode" ]] && config_dir=".opencode"
-    
+
     cat > "$devcontainer_dir/devcontainer.json" << DEVCONTAINER
 {
   "name": "$backend_name Dev Container",
@@ -630,6 +573,72 @@ DOCKERFILE
   }
 }
 DEVCONTAINER
+}
+
+# Initialize a .devcontainer directory in a project
+cmd_init() {
+    local lang="base"
+    local backend="$DEFAULT_BACKEND"
+    local project_dir=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --lang|-l)
+                lang="$2"
+                shift 2
+                ;;
+            --lang=*)
+                lang="${1#*=}"
+                shift
+                ;;
+            --backend|-b)
+                backend="$2"
+                shift 2
+                ;;
+            --backend=*)
+                backend="${1#*=}"
+                shift
+                ;;
+            *)
+                project_dir="$1"
+                shift
+                ;;
+        esac
+    done
+
+    project_dir=$(get_project_dir "${project_dir:-.}")
+    local devcontainer_dir="$project_dir/.devcontainer"
+
+    # Validate language
+    case "$lang" in
+        base|go|rust|python|node|emacs|solidity|all) ;;
+        *)
+            log_error "Unknown language: $lang"
+            log_error "Run '$0 langs' to see supported languages"
+            exit 1
+            ;;
+    esac
+
+    # Validate backend
+    case "$backend" in
+        claude|opencode) ;;
+        *)
+            log_error "Unknown backend: $backend"
+            log_error "Supported: claude, opencode"
+            exit 1
+            ;;
+    esac
+
+    if [[ -d "$devcontainer_dir" ]]; then
+        log_error "Directory $devcontainer_dir already exists"
+        exit 1
+    fi
+
+    log_info "Creating .devcontainer in $project_dir (language: $lang, backend: $backend)"
+    mkdir -p "$devcontainer_dir"
+
+    generate_dockerfile "$lang" "$backend" "$devcontainer_dir"
 
     # Store backend and lang choice for later commands
     echo "$backend" > "$devcontainer_dir/.backend"
@@ -687,8 +696,10 @@ cmd_build() {
 cmd_update() {
     local project_dir
     project_dir=$(get_project_dir "${1:-.}")
-    local dockerfile="$project_dir/.devcontainer/Dockerfile"
-    local backend_file="$project_dir/.devcontainer/.backend"
+    local devcontainer_dir="$project_dir/.devcontainer"
+    local dockerfile="$devcontainer_dir/Dockerfile"
+    local backend_file="$devcontainer_dir/.backend"
+    local lang_file="$devcontainer_dir/.lang"
 
     if [[ ! -f "$dockerfile" ]]; then
         log_error "No Dockerfile found at $dockerfile"
@@ -696,12 +707,16 @@ cmd_update() {
         exit 1
     fi
 
-    # Read backend from stored file
+    # Read backend and lang from stored files
     local backend="claude"
     if [[ -f "$backend_file" ]]; then
         backend=$(cat "$backend_file")
     fi
-    
+    local lang="base"
+    if [[ -f "$lang_file" ]]; then
+        lang=$(cat "$lang_file")
+    fi
+
     local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
     local container_name
     container_name=$(container_name_for_project "$project_dir")
@@ -712,6 +727,10 @@ cmd_update() {
         $ENGINE stop "$container_name" 2>/dev/null || true
         $ENGINE rm "$container_name" 2>/dev/null || true
     fi
+
+    # Regenerate Dockerfile from current script definitions
+    log_info "Regenerating Dockerfile (language: $lang, backend: $backend)"
+    generate_dockerfile "$lang" "$backend" "$devcontainer_dir"
 
     # Check current image age
     local image_created
@@ -726,7 +745,7 @@ cmd_update() {
         --pull \
         -t "$image_name" \
         -f "$dockerfile" \
-        "$project_dir/.devcontainer"
+        "$devcontainer_dir"
 
     log_info "Image $image_name updated successfully"
     log_info "Run '$0 code $project_dir' to start with the new image"
@@ -1006,7 +1025,7 @@ Usage: $(basename "$0") <command> [options] [project-dir]
 Commands:
   init    Initialize a .devcontainer directory in a project
   build   Build the container image
-  update  Rebuild image from scratch (no cache, pulls latest base)
+  update  Regenerate Dockerfile, then rebuild from scratch (no cache, pulls latest base)
   start   Start a container for the project
   shell   Get a shell in the running container
   code    Run the AI coding assistant directly
