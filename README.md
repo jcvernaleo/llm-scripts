@@ -52,7 +52,8 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 | `node` | Node.js + npm + pnpm |
 | `emacs` | Emacs (for elisp development) |
 | `solidity` | Foundry (forge, cast, anvil, chisel) |
-| `all` | Everything above |
+| `terraform` | Terraform |
+| `all` | Everything above (except solidity and terraform) |
 
 ### Backends (`--backend`)
 

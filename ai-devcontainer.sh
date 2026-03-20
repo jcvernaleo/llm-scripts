@@ -14,7 +14,7 @@
 #   ai-devcontainer.sh langs
 #
 # Supported languages for --lang:
-#   base, go, rust, python, node, emacs, solidity, all
+#   base, go, rust, python, node, emacs, solidity, terraform, all
 #
 # Supported backends for --backend:
 #   claude    Claude Code (default) - Anthropic's AI coding assistant
@@ -98,6 +98,7 @@ lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
 lang_packages_solidity=""
+lang_packages_terraform=""
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_node $lang_packages_emacs"
 
 # Language-specific environment variables
@@ -111,6 +112,7 @@ lang_env_node="ENV PNPM_HOME=/home/ai/.local/share/pnpm
 ENV PATH=\$PNPM_HOME:\$PATH"
 lang_env_emacs=""
 lang_env_solidity="ENV PATH=/home/ai/.foundry/bin:\$PATH"
+lang_env_terraform=""
 lang_env_all="$lang_env_go
 $lang_env_rust
 $lang_env_node
@@ -123,6 +125,11 @@ lang_postinstall_rust=""
 lang_postinstall_python=""
 lang_postinstall_node="RUN wget -qO- https://get.pnpm.io/install.sh | ENV=\"\$HOME/.bashrc\" SHELL=/bin/bash sh -"
 lang_postinstall_emacs=""
+lang_postinstall_terraform='RUN TERRAFORM_VERSION=$(wget -qO- https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '"'"'.current_version'"'"') && \
+    wget -qO /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" && \
+    sudo unzip -o /tmp/terraform.zip terraform -d /usr/local/bin/ && \
+    sudo chmod +x /usr/local/bin/terraform && \
+    rm /tmp/terraform.zip'
 lang_postinstall_solidity='RUN curl -L https://foundry.paradigm.xyz | bash && \
     /home/ai/.foundry/bin/foundryup && \
     echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc'
@@ -227,6 +234,16 @@ FIREWALL_DOMAINS_SOLIDITY=(
     "etherscan.io"
 )
 
+FIREWALL_DOMAINS_TERRAFORM=(
+    # Terraform provider registry
+    "registry.terraform.io"
+    # HashiCorp releases and checkpoint
+    "releases.hashicorp.com"
+    "checkpoint-api.hashicorp.com"
+    # HashiCorp services
+    "archivist.terraform.io"
+)
+
 # Get firewall domains for a language and backend
 get_firewall_domains() {
     local lang="$1"
@@ -262,6 +279,9 @@ get_firewall_domains() {
             ;;
         solidity)
             domains+=("${FIREWALL_DOMAINS_SOLIDITY[@]}")
+            ;;
+        terraform)
+            domains+=("${FIREWALL_DOMAINS_TERRAFORM[@]}")
             ;;
         all)
             domains+=("${FIREWALL_DOMAINS_GO[@]}")
@@ -395,8 +415,9 @@ Supported languages for --lang:
   python   Base + Python 3 + pip + virtualenv
   node     Base + Node.js + npm + pnpm
   emacs    Base + Emacs (for elisp development)
-  solidity Base + Foundry (forge, cast, anvil, chisel)
-  all      Everything: Go + Rust + Python + Node.js/pnpm + Emacs + Foundry
+  solidity  Base + Foundry (forge, cast, anvil, chisel)
+  terraform Base + Terraform
+  all       Everything: Go + Rust + Python + Node.js/pnpm + Emacs + Foundry
 
 Supported backends for --backend:
 
@@ -612,7 +633,7 @@ cmd_init() {
 
     # Validate language
     case "$lang" in
-        base|go|rust|python|node|emacs|solidity|all) ;;
+        base|go|rust|python|node|emacs|solidity|terraform|all) ;;
         *)
             log_error "Unknown language: $lang"
             log_error "Run '$0 langs' to see supported languages"
@@ -1035,7 +1056,7 @@ Commands:
 
 Options for init:
   --lang, -l LANG       Language environment (default: base)
-                        Supported: base, go, rust, python, node, emacs, solidity, all
+                        Supported: base, go, rust, python, node, emacs, solidity, terraform, all
   --backend, -b BACKEND AI backend (default: claude)
                         Supported: claude, opencode
 
