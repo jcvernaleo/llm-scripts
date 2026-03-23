@@ -2,7 +2,7 @@
 
 ## Future Ideas (not started)
 
-1. **Smoother session startup** — Starting a new session takes too many steps; needs to be more seamless.
+1. ~~**Smoother session startup**~~ — **Done.** `code` and `shell` now auto-init and auto-build on first run; single command for both fresh and existing projects.
 
 2. **Mobile dev environment** — Add an Android app development language/toolchain option (`--lang android` or similar).
 

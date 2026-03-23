@@ -678,9 +678,9 @@ GITIGNORE
     log_info "  - $devcontainer_dir/devcontainer.json"
     log_info ""
     log_info "Next steps:"
-    log_info "  1. Review and customize the Dockerfile for your project"
-    log_info "  2. Run: $0 build $project_dir"
-    log_info "  3. Run: $0 code $project_dir"
+    log_info "  1. Optionally review/customize: $devcontainer_dir/Dockerfile"
+    log_info "  2. Run: $0 code $project_dir"
+    log_info "     (builds automatically on first run)"
 }
 
 # Build the container image
@@ -927,26 +927,11 @@ cmd_start() {
 
 # Get a shell in the container
 cmd_shell() {
-    local project_dir
-    project_dir=$(get_project_dir "${1:-.}")
-    local container_name
-    container_name=$(container_name_for_project "$project_dir")
-
-    if ! container_running "$container_name"; then
-        log_error "Container $container_name is not running"
-        log_error "Run '$0 start $project_dir' first"
-        exit 1
-    fi
-
-    log_info "Entering shell in $container_name"
-    $ENGINE exec -it "$container_name" bash
-}
-
-# Run AI coding assistant directly
-cmd_code() {
     local ports=()
     local project_dir=""
     local open_network=false
+    local lang=""
+    local backend=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -967,6 +952,22 @@ cmd_code() {
                 open_network=true
                 shift
                 ;;
+            --lang|-l)
+                lang="$2"
+                shift 2
+                ;;
+            --lang=*)
+                lang="${1#*=}"
+                shift
+                ;;
+            --backend|-b)
+                backend="$2"
+                shift 2
+                ;;
+            --backend=*)
+                backend="${1#*=}"
+                shift
+                ;;
             *)
                 project_dir="$1"
                 shift
@@ -977,6 +978,100 @@ cmd_code() {
     project_dir=$(get_project_dir "${project_dir:-.}")
     local container_name
     container_name=$(container_name_for_project "$project_dir")
+
+    # Auto-init if .devcontainer doesn't exist
+    if [[ ! -d "$project_dir/.devcontainer" ]]; then
+        log_info "No .devcontainer found, initializing..."
+        local init_args=()
+        [[ -n "$lang" ]] && init_args+=(--lang "$lang")
+        [[ -n "$backend" ]] && init_args+=(--backend "$backend")
+        init_args+=("$project_dir")
+        cmd_init "${init_args[@]}"
+    fi
+
+    # Start if not running, passing port and network args
+    if ! container_running "$container_name"; then
+        local start_args=()
+        for port in "${ports[@]}"; do
+            start_args+=(--port "$port")
+        done
+        if [[ "$open_network" == "true" ]]; then
+            start_args+=(--open-network)
+        fi
+        start_args+=("$project_dir")
+        cmd_start "${start_args[@]}"
+    elif [[ ${#ports[@]} -gt 0 ]] || [[ "$open_network" == "true" ]]; then
+        log_warn "Container already running - changes require restart"
+        log_warn "Run '$0 stop $project_dir' first to apply changes"
+    fi
+
+    log_info "Entering shell in $container_name"
+    $ENGINE exec -it "$container_name" bash
+}
+
+# Run AI coding assistant directly
+cmd_code() {
+    local ports=()
+    local project_dir=""
+    local open_network=false
+    local lang=""
+    local backend_arg=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --port|-p)
+                ports+=("$2")
+                shift 2
+                ;;
+            --port=*)
+                ports+=("${1#*=}")
+                shift
+                ;;
+            -p*)
+                ports+=("${1:2}")
+                shift
+                ;;
+            --open-network|-O)
+                open_network=true
+                shift
+                ;;
+            --lang|-l)
+                lang="$2"
+                shift 2
+                ;;
+            --lang=*)
+                lang="${1#*=}"
+                shift
+                ;;
+            --backend|-b)
+                backend_arg="$2"
+                shift 2
+                ;;
+            --backend=*)
+                backend_arg="${1#*=}"
+                shift
+                ;;
+            *)
+                project_dir="$1"
+                shift
+                ;;
+        esac
+    done
+
+    project_dir=$(get_project_dir "${project_dir:-.}")
+    local container_name
+    container_name=$(container_name_for_project "$project_dir")
+
+    # Auto-init if .devcontainer doesn't exist
+    if [[ ! -d "$project_dir/.devcontainer" ]]; then
+        log_info "No .devcontainer found, initializing..."
+        local init_args=()
+        [[ -n "$lang" ]] && init_args+=(--lang "$lang")
+        [[ -n "$backend_arg" ]] && init_args+=(--backend "$backend_arg")
+        init_args+=("$project_dir")
+        cmd_init "${init_args[@]}"
+    fi
 
     # Read backend from stored file
     local backend="claude"
@@ -1054,13 +1149,14 @@ Commands:
   status  List all ai-dev containers
   langs   List supported languages and backends
 
-Options for init:
+Options for init/code/shell:
   --lang, -l LANG       Language environment (default: base)
                         Supported: base, go, rust, python, node, emacs, solidity, terraform, all
   --backend, -b BACKEND AI backend (default: claude)
                         Supported: claude, opencode
+  (--lang/--backend are used by code/shell only when auto-initializing a new project)
 
-Options for start/code:
+Options for start/code/shell:
   --port, -p PORT       Forward a port (HOST:CONTAINER format)
                         Can be specified multiple times
   --open-network, -O    Disable firewall restrictions (allow full internet access)
@@ -1074,30 +1170,25 @@ Environment variables:
   AI_DEVCONTAINER_IMAGE    Override image name
 
 Examples:
-  # Initialize with Claude Code (default)
-  $(basename "$0") init --lang go ~/projects/mygoapp
-  $(basename "$0") init --lang solidity ~/projects/mycontract
-  $(basename "$0") init --lang python .
+  # Start from scratch — code auto-initializes and builds on first run
+  $(basename "$0") code --lang go ~/projects/mygoapp
+  $(basename "$0") code --lang python .
+  $(basename "$0") code --backend opencode --lang node ~/projects/webapp
 
-  # Initialize with OpenCode
-  $(basename "$0") init --backend opencode --lang node ~/projects/webapp
-  $(basename "$0") init -b opencode -l rust .
-
-  # Build and run (network restricted by default)
-  $(basename "$0") build ~/projects/mygoapp
+  # Resume an existing project — same command, no flags needed
   $(basename "$0") code ~/projects/mygoapp
+  $(basename "$0") code .
+
+  # Customize before building (manual init workflow)
+  $(basename "$0") init --lang solidity ~/projects/mycontract
+  # ... edit .devcontainer/Dockerfile ...
+  $(basename "$0") code ~/projects/mycontract
 
   # Start with port forwarding for web development
-  $(basename "$0") start --port 3000:3000 --port 8080:8080 .
   $(basename "$0") code -p 3000:3000 ~/projects/webapp
 
   # Run with unrestricted network access (less secure)
   $(basename "$0") code --open-network .
-
-  # Quick start in current directory
-  $(basename "$0") init
-  $(basename "$0") build
-  $(basename "$0") code
 EOF
 }
 
@@ -1121,7 +1212,8 @@ main() {
             cmd_start "$@"
             ;;
         shell)
-            cmd_shell "${2:-}"
+            shift
+            cmd_shell "$@"
             ;;
         code)
             shift

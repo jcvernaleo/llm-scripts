@@ -17,13 +17,18 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 ### Quick start
 
 ```bash
-# Initialize a container config in your project
+# First time — initializes, builds, and launches in one step
+./ai-devcontainer.sh code --lang go ~/projects/myapp
+
+# Resume an existing project — same command, no flags needed
+./ai-devcontainer.sh code ~/projects/myapp
+```
+
+For projects where you want to customize the generated Dockerfile before building:
+
+```bash
 ./ai-devcontainer.sh init --lang go ~/projects/myapp
-
-# Build the container image
-./ai-devcontainer.sh build ~/projects/myapp
-
-# Launch the AI assistant
+# ... edit .devcontainer/Dockerfile ...
 ./ai-devcontainer.sh code ~/projects/myapp
 ```
 
@@ -35,8 +40,8 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 | `build [dir]` | Build the container image |
 | `update [dir]` | Regenerate Dockerfile, then rebuild from scratch (no cache, pulls latest base) |
 | `start [--port HOST:CONTAINER]... [--open-network] [dir]` | Start container |
-| `code [--port HOST:CONTAINER]... [--open-network] [dir]` | Start container and launch the AI assistant |
-| `shell [dir]` | Open an interactive shell in the running container |
+| `code [--lang LANG] [--backend BACKEND] [--port HOST:CONTAINER]... [--open-network] [dir]` | Start container and launch the AI assistant (auto-inits on first run) |
+| `shell [--lang LANG] [--backend BACKEND] [--port HOST:CONTAINER]... [--open-network] [dir]` | Open an interactive shell in the container (auto-inits on first run) |
 | `stop [dir]` | Stop and remove the container |
 | `status` | List all ai-dev containers |
 | `langs` | Show supported languages and backends |
