@@ -130,8 +130,18 @@ lang_postinstall_terraform='RUN TERRAFORM_VERSION=$(wget -qO- https://checkpoint
     sudo unzip -o /tmp/terraform.zip terraform -d /usr/local/bin/ && \
     sudo chmod +x /usr/local/bin/terraform && \
     rm /tmp/terraform.zip'
-lang_postinstall_solidity='RUN curl -L https://foundry.paradigm.xyz | bash && \
-    /home/ai/.foundry/bin/foundryup && \
+lang_postinstall_solidity='RUN sudo apk add --no-cache --virtual .foundry-build build-base openssl-dev pkgconf linux-headers libusb-dev && \
+    sudo apk add --no-cache libusb && \
+    curl --proto '"'"'=https'"'"' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path && \
+    PATH="/home/ai/.cargo/bin:$PATH" CARGO_HOME=/tmp/cbuild OPENSSL_NO_VENDOR=1 /home/ai/.cargo/bin/cargo install \
+        --locked --git https://github.com/foundry-rs/foundry \
+        forge cast anvil chisel && \
+    mkdir -p /home/ai/.foundry/bin && \
+    mv /tmp/cbuild/bin/forge /tmp/cbuild/bin/cast \
+       /tmp/cbuild/bin/anvil /tmp/cbuild/bin/chisel \
+       /home/ai/.foundry/bin/ && \
+    sudo apk del .foundry-build && \
+    rm -rf /tmp/cbuild /home/ai/.cargo /home/ai/.rustup && \
     echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc'
 lang_postinstall_all="$lang_postinstall_node
 $lang_postinstall_solidity"
