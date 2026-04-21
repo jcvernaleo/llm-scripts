@@ -142,7 +142,10 @@ lang_postinstall_solidity='RUN sudo apk add --no-cache --virtual .foundry-build 
        /home/ai/.foundry/bin/ && \
     sudo apk del .foundry-build && \
     rm -rf /tmp/cbuild /home/ai/.cargo /home/ai/.rustup && \
-    echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc'
+    echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc && \
+    SOLC_VERSION=$(wget -qO- https://api.github.com/repos/ethereum/solidity/releases/latest | jq -r '"'"'.tag_name'"'"' | sed '"'"'s/^v//'"'"') && \
+    sudo wget -qO /usr/local/bin/solc "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux" && \
+    sudo chmod +x /usr/local/bin/solc'
 lang_postinstall_all="$lang_postinstall_node
 $lang_postinstall_solidity"
 
