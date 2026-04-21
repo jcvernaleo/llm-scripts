@@ -126,6 +126,7 @@ The `commands/` directory contains custom slash command definitions to install i
 | `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
 | `/sessions` | List recent sessions across all projects |
 | `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
+| `/pre-audit` | Verify build, inspect contracts, and produce an ordered audit checklist |
 | `/audit` | Smart contract security audit using the SCAR methodology |
 
 Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
@@ -142,6 +143,17 @@ Bootstraps a new umbrella workspace for managing multiple related repos together
 - Makes an initial commit
 
 Usage: run `/new-workspace <project-name>` in an empty directory. If no name is given, it will prompt you.
+
+### `/pre-audit`
+
+Run before `/audit` to verify the project builds and produce a structured audit plan:
+
+- Runs `forge build` and stops if there are compilation errors
+- Inspects all Solidity contracts and catalogues their type, purpose, and dependencies
+- Groups contracts into ordered audit batches (dependencies before dependents, critical contracts last)
+- Writes `audit/AUDIT-CHECKLIST.md` with a contract inventory and a ready-to-follow plan of `/audit` commands
+
+Usage: run `/pre-audit` from the project root with no arguments.
 
 ### `/audit`
 
