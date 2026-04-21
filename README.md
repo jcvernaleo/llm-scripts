@@ -126,6 +126,7 @@ The `commands/` directory contains custom slash command definitions to install i
 | `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
 | `/sessions` | List recent sessions across all projects |
 | `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
+| `/audit` | Smart contract security audit using the SCAR methodology |
 
 Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
 
@@ -141,6 +142,22 @@ Bootstraps a new umbrella workspace for managing multiple related repos together
 - Makes an initial commit
 
 Usage: run `/new-workspace <project-name>` in an empty directory. If no name is given, it will prompt you.
+
+### `/audit`
+
+Performs a smart contract security audit using the SCAR methodology (Scan, Classify, Analyze, Report):
+
+- Scans all in-scope contracts for known vulnerability patterns (reentrancy, access control, integer issues, oracle manipulation, etc.)
+- Classifies each finding by severity: Critical, High, Medium, Low, or Informational
+- Traces execution paths for Critical and High findings
+- Produces a structured report with proof of concept, recommended fix, and a Foundry regression test for each finding
+
+Usage: pass a single Solidity file or a directory of contracts as the argument.
+
+```
+/audit contracts/Vault.sol
+/audit src/
+```
 
 To install the commands:
 
