@@ -238,6 +238,11 @@ FIREWALL_DOMAINS_EMACS=(
 FIREWALL_DOMAINS_SOLIDITY=(
     # Foundry
     "foundry.paradigm.xyz"
+    # Solidity compiler downloads (used by Foundry's svm-rs)
+    # binaries.soliditylang.org is Cloudflare-hosted; allow by CIDR since IPs rotate
+    "binaries.soliditylang.org"
+    "104.16.0.0/13"
+    "172.64.0.0/13"
     # Ethereum RPC endpoints
     "eth.merkle.io"
     "cloudflare-eth.com"
