@@ -110,6 +110,20 @@ The file must be structured as a professional audit report:
 
 After writing the file, print the path to the report.
 
+## Checklist Update
+
+After writing the audit report, check if an audit checklist file exists (look for
+`audit/AUDIT-CHECKLIST.md`). If it exists:
+
+1. Find the checklist item(s) matching the audited scope (match on the file or path
+   argument from `$ARGUMENTS`).
+2. For each matching item, mark it complete and append a findings summary:
+   - Change `- [ ]` to `- [x]`
+   - Append ` — <summary>` at the end of the line, where `<summary>` lists only
+     severities with at least one finding, in order Critical → High → Medium → Low →
+     Informational, e.g. `— 1 High, 2 Low, 3 Informational` or `— No findings`
+     if there are none.
+
 ## Rules
 - Never skip a contract file, even if it looks simple
 - Always check cross-contract interactions, not just individual files
