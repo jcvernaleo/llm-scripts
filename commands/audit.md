@@ -123,6 +123,12 @@ After writing the audit report, check if an audit checklist file exists (look fo
      severities with at least one finding, in order Critical → High → Medium → Low →
      Informational, e.g. `— 1 High, 2 Low, 3 Informational` or `— No findings`
      if there are none.
+3. After updating the checklist item(s), tally all findings across every checked-off
+   item in the file and update the total line at the end of the file. The total line
+   must be the last line and have the format:
+   `**Total: X Critical, X High, X Medium, X Low, X Informational**`
+   listing only severities with at least one finding across all completed items.
+   If the total line does not yet exist, append it. If it does exist, replace it.
 
 ## Rules
 - Never skip a contract file, even if it looks simple
