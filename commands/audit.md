@@ -48,10 +48,11 @@ For each finding, provide:
 ## Output File
 
 When the audit is complete, write the full report to a markdown file named
-`audit-<scope>-<date>.md` in the current directory, where `<scope>` is the
+`audit-<scope>-<date>.md` in the `audit/` directory, where `<scope>` is the
 base name of the file or directory audited (e.g. `Vault` for `contracts/Vault.sol`
 or `src` for `src/`) and `<date>` is the current date in `YYYYMMDD` format
-(e.g. `audit-Vault-20260421.md`).
+(e.g. `audit/audit-Vault-20260421.md`). Create the `audit/` directory if it does
+not exist.
 
 The file must be structured as a professional audit report:
 

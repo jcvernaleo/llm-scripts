@@ -20,58 +20,45 @@ configured in `foundry.toml`). For each contract, note:
 
 ## Step 3: Build an ordered audit plan
 
-Group contracts into audit batches, ordered so that dependencies are audited
-before the contracts that use them. Apply these principles:
+Order contracts so that dependencies are audited before the contracts that use
+them. Apply these principles:
 
 - Interfaces and libraries first (lowest risk, establish shared types)
 - Base/abstract contracts before their children
-- Core/critical contracts (fund custody, access control, entry points) last and in
-  their own group so they receive the most focused attention
-- Keep tightly coupled contracts in the same group when their interactions matter
-- Each group should be a manageable scope for a single `/audit` run — prefer
-  smaller focused groups over one large group
+- Core/critical contracts (fund custody, access control, entry points) last so
+  they receive the most focused attention
+- Keep tightly coupled contracts together when their interactions matter
+- Each entry should be a manageable scope for a single `/audit` run — prefer
+  smaller focused entries over one large group
 
 ## Step 4: Write the checklist
 
 Create the `audit/` directory if it does not exist. Write `audit/AUDIT-CHECKLIST.md`
-with the following structure:
+using this exact format — a lean progress tracker, nothing more:
 
 ```
-# Audit Checklist
+# Audit Checklist — `<repo or project name>`
 
-**Repository:** <git remote origin URL>
-**Commit:** <full git commit hash>
-**Date:** YYYY-MM-DD
-**Build:** Passed
+Scope: <brief description of what is in scope, e.g. "all `src/` files changed relative to `main`">
+Order: <one line describing the ordering rationale, e.g. "foundational → outward (storage → interfaces → utilities → core logic)">
 
-## Contracts in Scope
+---
 
-| Contract | File | Type | Description |
-|----------|------|------|-------------|
-| ...      | ...  | ...  | ...         |
+## Progress
 
-## Audit Plan
-
-Work through the groups below in order. Run `/audit <path>` (or list individual
-files) for each group. Check off each group when its audit report is complete.
-
-### Group 1 — <descriptive name, e.g. "Libraries & Interfaces">
-- [ ] `/audit <file-or-path>`
-- [ ] `/audit <file-or-path>`
-
-*Why this group:* <one sentence on what these share and why they come first>
-
-### Group 2 — <descriptive name>
-- [ ] `/audit <file-or-path>`
-
-*Why this group:* ...
-
-(continue for all groups)
-
-## Notes
-
-<any observations from the inspection worth flagging before the audit begins:
-unusual patterns, complex inheritance chains, areas of elevated risk, etc.>
+- [ ] `<file-or-path>` — <contract name(s) and one-phrase description>
+- [ ] `<file-or-path>` — <contract name(s) and one-phrase description>
 ```
 
-After writing the file, print the path and a brief summary of the plan.
+Rules for the checklist:
+- One line per file (or tightly coupled file group) to audit
+- Each line: checkbox, file path in backticks, em dash, brief description only
+- No headers beyond `## Progress`
+- No tables, no "Why this group" prose, no Notes section
+- No findings, observations, or risk commentary — those belong in the audit reports
+- As audit reports are completed, lines get checked off and the report filename
+  plus finding counts are appended to that line, e.g.:
+  `- [x] \`src/Foo.sol\` — Foo contract (`audit-Foo-2026-04-22.md`) — 1 Medium, 2 Low`
+- A totals line is added at the end once all items are checked off
+
+After writing the file, print the path and a one-sentence summary of the scope.
