@@ -54,12 +54,15 @@ or `src` for `src/`) and `<date>` is the current date in `YYYYMMDD` format
 (e.g. `audit/audit-Vault-20260421.md`). Create the `audit/` directory if it does
 not exist.
 
+Before writing the file, run `git config user.email` to get the calling user's
+email for the Auditor field.
+
 The file must be structured as a professional audit report:
 
 ```
 # Smart Contract Security Audit
 **Date:** YYYY-MM-DD
-**Auditor:** Claude (SCAR Methodology)
+**Auditor:** <git config user.email> & Claude (SCAR Methodology)
 **Scope:** <file or directory audited>
 **Repository:** <git remote origin URL>
 **Commit:** <full git commit hash>
