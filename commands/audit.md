@@ -118,12 +118,14 @@ After writing the audit report, check if an audit checklist file exists (look fo
 
 1. Find the checklist item(s) matching the audited scope (match on the file or path
    argument from `$ARGUMENTS`).
-2. For each matching item, mark it complete and append a findings summary:
+2. For each matching item, mark it complete and append the report filename and
+   findings summary:
    - Change `- [ ]` to `- [x]`
-   - Append ` — <summary>` at the end of the line, where `<summary>` lists only
-     severities with at least one finding, in order Critical → High → Medium → Low →
-     Informational, e.g. `— 1 High, 2 Low, 3 Informational` or `— No findings`
-     if there are none.
+   - Append ` (\`<report-filename>\`) — <summary>` at the end of the line, where
+     `<report-filename>` is the basename of the audit report file (e.g.
+     `audit-Vault-20260421.md`) and `<summary>` lists only severities with at least
+     one finding, in order Critical → High → Medium → Low → Informational, e.g.
+     `— 1 High, 2 Low, 3 Informational` or `— No findings` if there are none.
 3. After updating the checklist item(s), tally all findings across every checked-off
    item in the file and update the total line at the end of the file. The total line
    must be the last line and have the format:

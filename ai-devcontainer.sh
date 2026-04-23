@@ -97,7 +97,7 @@ lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
-lang_packages_solidity=""
+lang_packages_solidity="pandoc py3-weasyprint font-dejavu fontconfig"
 lang_packages_terraform=""
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_node $lang_packages_emacs"
 
