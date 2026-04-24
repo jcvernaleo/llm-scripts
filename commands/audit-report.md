@@ -102,7 +102,7 @@ Build a single combined markdown document in this order:
      change. List severities in order: Critical, High, Medium, Low, Informational.
    - Below the table, add a brief plain-English summary, e.g.:
      > Round 2 resolved 1 High and 2 Low findings from Round 1. 1 new Medium
-     > finding was identified. Net change: −3 findings.
+     > finding was identified.
 
 3. **Prior rounds** (if any `audit/round-*/` directories exist):
    - Process them in ascending round order (`round-1/`, `round-2/`, etc.)
