@@ -81,10 +81,19 @@ hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
 
 ## Step 4: Concatenate the markdown files
 
-Build a single combined markdown document:
-1. Start with `audit/AUDIT-CHECKLIST.md` (if present)
-2. Add a `---` separator between documents
-3. Append each `audit-*.md` file in alphabetical filename order, separated by `---`
+Build a single combined markdown document in this order:
+
+1. **Current round** (the `audit/` root):
+   - Start with `audit/AUDIT-CHECKLIST.md`
+   - Append each `audit-*.md` file in alphabetical filename order, separated by `---`
+
+2. **Prior rounds** (if any `audit/round-*/` directories exist):
+   - Process them in ascending round order (`round-1/`, `round-2/`, etc.)
+   - For each round, insert a top-level heading: `# Appendix: Round N Audit`
+   - Append that round's `AUDIT-CHECKLIST.md`, then its `audit-*.md` files in
+     alphabetical order, each separated by `---`
+
+Use `---` as the separator between every document throughout.
 
 Write the combined content to `/tmp/audit-combined.md`.
 

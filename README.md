@@ -128,7 +128,8 @@ The `commands/` directory contains custom slash command definitions to install i
 | `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
 | `/pre-audit` | Verify build, inspect contracts, and produce an ordered audit checklist |
 | `/audit` | Smart contract security audit using the SCAR methodology |
-| `/audit-report` | Combine all audit markdown files into a single formatted PDF |
+| `/re-audit` | Archive the current audit round and prepare a new checklist for a follow-up audit |
+| `/audit-report` | Combine all audit rounds into a single formatted PDF |
 
 Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
 
@@ -172,12 +173,23 @@ Usage: pass a single Solidity file or a directory of contracts as the argument.
 /audit src/
 ```
 
+### `/re-audit`
+
+Use after the author has addressed findings from a completed audit round:
+
+- Checks that the current checklist is fully complete before archiving
+- Moves the current checklist, audit reports, and PDF into `audit/round-N/`
+- Runs `forge build` to verify the updated code compiles
+- Generates a fresh `audit/AUDIT-CHECKLIST.md` annotated with prior findings per file (e.g. `← Round 1: 1 High, 2 Low`) so the auditor knows what to verify
+
+Usage: run `/re-audit` from the project root. Then use `/audit` as normal for each item in the new checklist.
+
 ### `/audit-report`
 
-Generates a single combined PDF from all audit output once the full audit is complete:
+Generates a single combined PDF from all audit rounds once the current round is complete:
 
 - Checks that every item in `audit/AUDIT-CHECKLIST.md` is checked off; stops with an explanation if any remain incomplete
-- Concatenates the checklist and all `audit-*.md` reports in order
+- Concatenates the current round's checklist and reports, then appends all prior rounds as appendices in order
 - Converts to a formatted PDF via pandoc and weasyprint (available in the `solidity` container)
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
 
