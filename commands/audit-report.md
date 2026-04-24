@@ -87,7 +87,24 @@ Build a single combined markdown document in this order:
    - Start with `audit/AUDIT-CHECKLIST.md`
    - Append each `audit-*.md` file in alphabetical filename order, separated by `---`
 
-2. **Prior rounds** (if any `audit/round-*/` directories exist):
+2. **Round-over-round comparison** (only if at least one `audit/round-*/` directory exists):
+
+   Generate a `# Round-over-Round Comparison` section and insert it after the
+   current round's content, separated by `---`. Build it as follows:
+
+   - Read the `**Total:**` line from the current round's `AUDIT-CHECKLIST.md`
+     and from the most recently archived round's `AUDIT-CHECKLIST.md` (the
+     highest-numbered `audit/round-*/` directory).
+   - Parse out the per-severity counts from each total line. Treat any severity
+     not mentioned as 0.
+   - Produce a markdown table with columns: Severity, Previous Round, Current
+     Round, Change. For Change, use `+N` (red) or `-N` (green) or `—` for no
+     change. List severities in order: Critical, High, Medium, Low, Informational.
+   - Below the table, add a brief plain-English summary, e.g.:
+     > Round 2 resolved 1 High and 2 Low findings from Round 1. 1 new Medium
+     > finding was identified. Net change: −3 findings.
+
+3. **Prior rounds** (if any `audit/round-*/` directories exist):
    - Process them in ascending round order (`round-1/`, `round-2/`, etc.)
    - For each round, insert a top-level heading: `# Appendix: Round N Audit`
    - Append that round's `AUDIT-CHECKLIST.md`, then its `audit-*.md` files in
