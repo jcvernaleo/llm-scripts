@@ -23,6 +23,8 @@ Create the `audit/round-N/` directory. Move into it:
 - `audit/AUDIT-CHECKLIST.md`
 - All `audit/audit-*.md` files
 - All `audit/audit-*.pdf` files
+- `audit/tob-prep.md` (if present)
+- `audit/tob-maturity.md` (if present)
 
 Do not move the `audit/round-*/` subdirectories themselves.
 
@@ -30,6 +32,16 @@ Do not move the `audit/round-*/` subdirectories themselves.
 
 Run `forge build`. If it fails, report the errors and stop — do not proceed
 until the code compiles cleanly.
+
+## Step 4a: Trail of Bits — Audit Preparation
+
+Invoke the `building-secure-contracts:audit-prep-assistant` skill. When it
+completes, write its full output to `audit/tob-prep.md`.
+
+## Step 4b: Trail of Bits — Code Maturity Assessment
+
+Invoke the `building-secure-contracts:code-maturity-assessor` skill. When it
+completes, write its full output to `audit/tob-maturity.md`.
 
 ## Step 5: Inspect the codebase
 

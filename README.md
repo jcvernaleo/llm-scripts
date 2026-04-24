@@ -151,8 +151,10 @@ Usage: run `/new-workspace <project-name>` in an empty directory. If no name is 
 Run before `/audit` to verify the project builds and produce a structured audit plan:
 
 - Runs `forge build` and stops if there are compilation errors
+- Runs the Trail of Bits `audit-prep-assistant` (Slither, static analysis, docs) and saves output to `audit/tob-prep.md`
+- Runs the Trail of Bits `code-maturity-assessor` (9-category scorecard) and saves output to `audit/tob-maturity.md`
 - Inspects all Solidity contracts and catalogues their type, purpose, and dependencies
-- Groups contracts into ordered audit batches (dependencies before dependents, critical contracts last)
+- Groups contracts into ordered audit batches (dependencies before dependents, critical contracts last), informed by static analysis findings
 - Writes `audit/AUDIT-CHECKLIST.md` with a contract inventory and a ready-to-follow plan of `/audit` commands
 
 Usage: run `/pre-audit` from the project root with no arguments.
@@ -178,8 +180,9 @@ Usage: pass a single Solidity file or a directory of contracts as the argument.
 Use after the author has addressed findings from a completed audit round:
 
 - Checks that the current checklist is fully complete before archiving
-- Moves the current checklist, audit reports, and PDF into `audit/round-N/`
+- Moves the current checklist, audit reports, ToB analysis files, and PDF into `audit/round-N/`
 - Runs `forge build` to verify the updated code compiles
+- Re-runs the Trail of Bits `audit-prep-assistant` and `code-maturity-assessor` on the updated code
 - Generates a fresh `audit/AUDIT-CHECKLIST.md` annotated with prior findings per file (e.g. `← Round 1: 1 High, 2 Low`) so the auditor knows what to verify
 
 Usage: run `/re-audit` from the project root. Then use `/audit` as normal for each item in the new checklist.

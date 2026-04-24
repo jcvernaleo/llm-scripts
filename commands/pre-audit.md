@@ -7,7 +7,19 @@ Prepare a smart contract audit plan for the project in the current directory.
 Run `forge build`. If it fails, report the errors and stop — do not proceed until
 the code compiles cleanly.
 
-## Step 2: Inspect the codebase
+## Step 2: Trail of Bits — Audit Preparation
+
+Create the `audit/` directory if it does not exist.
+
+Invoke the `building-secure-contracts:audit-prep-assistant` skill. When it
+completes, write its full output to `audit/tob-prep.md`.
+
+## Step 3: Trail of Bits — Code Maturity Assessment
+
+Invoke the `building-secure-contracts:code-maturity-assessor` skill. When it
+completes, write its full output to `audit/tob-maturity.md`.
+
+## Step 4: Inspect the codebase
 
 Read all Solidity source files (typically under `src/`, `contracts/`, or as
 configured in `foundry.toml`). For each contract, note:
@@ -18,7 +30,7 @@ configured in `foundry.toml`). For each contract, note:
 - What it imports / inherits from
 - Whether it handles funds, access control, or external calls
 
-## Step 3: Build an ordered audit plan
+## Step 5: Build an ordered audit plan
 
 Order contracts so that dependencies are audited before the contracts that use
 them. Apply these principles:
@@ -31,10 +43,13 @@ them. Apply these principles:
 - Each entry should be a manageable scope for a single `/audit` run — prefer
   smaller focused entries over one large group
 
-## Step 4: Write the checklist
+Use findings from `audit/tob-prep.md` (Slither output, static analysis) to
+inform the ordering and flag files that already have known issues.
 
-Create the `audit/` directory if it does not exist. Write `audit/AUDIT-CHECKLIST.md`
-using this exact format — a lean progress tracker, nothing more:
+## Step 6: Write the checklist
+
+Write `audit/AUDIT-CHECKLIST.md` using this exact format — a lean progress
+tracker, nothing more:
 
 ```
 # Audit Checklist — `<repo or project name>`
@@ -61,4 +76,5 @@ Rules for the checklist:
   `- [x] \`src/Foo.sol\` — Foo contract (`audit-Foo-2026-04-22.md`) — 1 Medium, 2 Low`
 - A totals line is added at the end once all items are checked off
 
-After writing the file, print the path and a one-sentence summary of the scope.
+After writing the file, print the paths of all files written and a one-sentence
+summary of the scope.

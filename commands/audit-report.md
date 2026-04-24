@@ -85,6 +85,8 @@ Build a single combined markdown document in this order:
 
 1. **Current round** (the `audit/` root):
    - Start with `audit/AUDIT-CHECKLIST.md`
+   - If `audit/tob-maturity.md` exists, append it (separated by `---`)
+   - If `audit/tob-prep.md` exists, append it (separated by `---`)
    - Append each `audit-*.md` file in alphabetical filename order, separated by `---`
 
 2. **Round-over-round comparison** (only if at least one `audit/round-*/` directory exists):
@@ -107,7 +109,8 @@ Build a single combined markdown document in this order:
 3. **Prior rounds** (if any `audit/round-*/` directories exist):
    - Process them in ascending round order (`round-1/`, `round-2/`, etc.)
    - For each round, insert a top-level heading: `# Appendix: Round N Audit`
-   - Append that round's `AUDIT-CHECKLIST.md`, then its `audit-*.md` files in
+   - Append that round's `AUDIT-CHECKLIST.md`, then `tob-maturity.md` (if
+     present), then `tob-prep.md` (if present), then its `audit-*.md` files in
      alphabetical order, each separated by `---`
 
 Use `---` as the separator between every document throughout.
