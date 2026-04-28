@@ -129,6 +129,7 @@ The `commands/` directory contains custom slash command definitions to install i
 | `/pre-audit` | Verify build, run ToB analysis, and produce an ordered audit checklist; auto-detects re-audits |
 | `/audit` | Smart contract security audit using the SCAR methodology |
 | `/audit-report` | Combine all audit rounds into a single formatted PDF |
+| `/full-audit` | Run the complete pipeline: pre-audit, audit every checklist item, generate PDF |
 
 Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
 
@@ -190,6 +191,18 @@ Generates a single combined PDF from all audit rounds once the current round is 
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
 
 Usage: run `/audit-report` from the project root with no arguments after all `/audit` runs are complete.
+
+### `/full-audit`
+
+Runs the entire audit pipeline in one command:
+
+- **No prior checklist** → runs `/pre-audit`, audits every checklist item in order, then generates the PDF
+- **Incomplete checklist** → resumes from the first unchecked item (skips pre-audit), then generates the PDF
+- **Complete checklist** → runs `/pre-audit` (re-audit path: archives round, fresh checklist), audits every item, then generates the PDF
+
+If anything fails (build error, audit error), stops immediately and reports the failure.
+
+Usage: run `/full-audit` from the project root with no arguments.
 
 To install the commands:
 
