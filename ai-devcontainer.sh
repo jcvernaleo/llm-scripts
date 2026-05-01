@@ -97,9 +97,9 @@ lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
-lang_packages_solidity="pandoc py3-weasyprint font-dejavu fontconfig"
+lang_packages_solidity="$lang_packages_node pandoc py3-weasyprint font-dejavu fontconfig"
 lang_packages_terraform=""
-lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_node $lang_packages_emacs"
+lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_emacs $lang_packages_solidity"
 
 # Language-specific environment variables
 lang_env_base=""
@@ -111,11 +111,11 @@ lang_env_python=""
 lang_env_node="ENV PNPM_HOME=/home/ai/.local/share/pnpm
 ENV PATH=\$PNPM_HOME:\$PATH"
 lang_env_emacs=""
-lang_env_solidity="ENV PATH=/home/ai/.foundry/bin:\$PATH"
+lang_env_solidity="$lang_env_node
+ENV PATH=/home/ai/.foundry/bin:\$PATH"
 lang_env_terraform=""
 lang_env_all="$lang_env_go
 $lang_env_rust
-$lang_env_node
 $lang_env_solidity"
 
 # Language-specific post-install commands (run as ai user)
@@ -130,7 +130,7 @@ lang_postinstall_terraform='RUN TERRAFORM_VERSION=$(wget -qO- https://checkpoint
     sudo unzip -o /tmp/terraform.zip terraform -d /usr/local/bin/ && \
     sudo chmod +x /usr/local/bin/terraform && \
     rm /tmp/terraform.zip'
-lang_postinstall_solidity='RUN sudo apk add --no-cache --virtual .foundry-build build-base openssl-dev pkgconf linux-headers libusb-dev && \
+_lang_postinstall_foundry='RUN sudo apk add --no-cache --virtual .foundry-build build-base openssl-dev pkgconf linux-headers libusb-dev && \
     sudo apk add --no-cache libusb && \
     curl --proto '"'"'=https'"'"' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path && \
     PATH="/home/ai/.cargo/bin:$PATH" CARGO_HOME=/tmp/cbuild OPENSSL_NO_VENDOR=1 /home/ai/.cargo/bin/cargo install \
@@ -146,8 +146,9 @@ lang_postinstall_solidity='RUN sudo apk add --no-cache --virtual .foundry-build 
     SOLC_VERSION=$(wget -qO- https://api.github.com/repos/ethereum/solidity/releases/latest | jq -r '"'"'.tag_name'"'"' | sed '"'"'s/^v//'"'"') && \
     sudo wget -qO /usr/local/bin/solc "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux" && \
     sudo chmod +x /usr/local/bin/solc'
-lang_postinstall_all="$lang_postinstall_node
-$lang_postinstall_solidity"
+lang_postinstall_solidity="${lang_postinstall_node}
+${_lang_postinstall_foundry}"
+lang_postinstall_all="$lang_postinstall_solidity"
 
 # Firewall allowed domains (base domains always allowed)
 FIREWALL_DOMAINS_BASE=(
@@ -297,6 +298,7 @@ get_firewall_domains() {
             ;;
         solidity)
             domains+=("${FIREWALL_DOMAINS_SOLIDITY[@]}")
+            domains+=("${FIREWALL_DOMAINS_NODE[@]}")
             ;;
         terraform)
             domains+=("${FIREWALL_DOMAINS_TERRAFORM[@]}")
@@ -433,7 +435,7 @@ Supported languages for --lang:
   python   Base + Python 3 + pip + virtualenv
   node     Base + Node.js + npm + pnpm
   emacs    Base + Emacs (for elisp development)
-  solidity  Base + Foundry (forge, cast, anvil, chisel)
+  solidity  Base + Foundry (forge, cast, anvil, chisel) + Node.js + pnpm
   terraform Base + Terraform
   all       Everything: Go + Rust + Python + Node.js/pnpm + Emacs + Foundry
 
