@@ -11,3 +11,7 @@
 4. **Switch to native Claude installer** — Blocked by musl 1.2.5 in Alpine 3.23; revert from npm install once musl 1.2.6+ is available.
 
 5. **Improve security** — Possibly move firewall rules to the host instead of inside the container; explore best approach.
+
+6. **Web vulnerability checking commands** — Add skills/commands for auditing web code for security vulnerabilities.
+
+7. **Migrate commands to skills** — Move `.claude/commands/*.md` files to `.claude/skills/<name>/SKILL.md` format. Low priority; existing commands work fine.
