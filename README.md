@@ -7,6 +7,7 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
 - **`commands/`** — Custom Claude Code slash commands for session state persistence and workspace scaffolding.
+- **`skills/`** — Claude Code skills for web application security review.
 
 ---
 
@@ -115,7 +116,9 @@ SSH agent socket and git configuration are also forwarded from the host automati
 
 ---
 
-## Claude Code commands
+## Claude Code commands and skills
+
+### Session management commands
 
 The `commands/` directory contains custom slash command definitions to install in `~/.claude/commands/`. They provide session state persistence across Claude Code sessions:
 
@@ -208,6 +211,26 @@ To install the commands:
 
 ```bash
 cp commands/*.md ~/.claude/commands/
+```
+
+### Web security skills
+
+The `skills/` directory contains Claude Code skills for web application security review, installable to `~/.claude/skills/`. Each is invoked as a slash command and restricts itself to read-only tools:
+
+| Skill | Description |
+|-------|-------------|
+| `/vuln-scan` | General web vulnerability scan (XSS, SQLi, SSRF, path traversal, command injection, insecure deserialization, etc.) |
+| `/sqli-deep` | Taint-analysis-style deep-dive SQL injection review: traces user input from entry points to query sinks |
+| `/authz-review` | Broken access control, IDOR, and privilege escalation review |
+| `/secrets-audit` | Hunt for hardcoded secrets, credentials, API keys, and tokens (includes git history check) |
+| `/depcheck` | Dependency manifest review for dangerous, deprecated, or vulnerable packages |
+
+All skills accept a file or directory as an argument, e.g. `/vuln-scan src/`.
+
+To install the skills:
+
+```bash
+cp -r skills/* ~/.claude/skills/
 ```
 
 ---

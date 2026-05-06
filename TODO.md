@@ -12,6 +12,6 @@
 
 5. **Improve security** — Possibly move firewall rules to the host instead of inside the container; explore best approach.
 
-6. **Web vulnerability checking commands** — Add skills/commands for auditing web code for security vulnerabilities.
+6. ~~**Web vulnerability checking commands**~~ — **Done.** Added five web security skills (`/vuln-scan`, `/sqli-deep`, `/authz-review`, `/secrets-audit`, `/depcheck`) to `skills/`.
 
 7. **Migrate commands to skills** — Move `.claude/commands/*.md` files to `.claude/skills/<name>/SKILL.md` format. Low priority; existing commands work fine.
