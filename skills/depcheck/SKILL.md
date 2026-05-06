@@ -26,4 +26,4 @@ For each, assess:
 6. **Crypto library choice**: MD5/SHA1 for password hashing, use of `pycrypto` vs `cryptography`, DES/ECB usage
 
 Output a table of concerns with package name, issue type, and recommendation.
-Note: this is pattern-based review, not CVE  recommend running grype/osv-scanner for CVE matching separately.lookup 
+Note: this is a pattern-based review, not a CVE lookup — recommend running grype/osv-scanner for CVE matching separately.

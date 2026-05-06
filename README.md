@@ -6,8 +6,8 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
-- **`commands/`** — Custom Claude Code slash commands for session state persistence and workspace scaffolding.
-- **`skills/`** — Claude Code skills for web application security review.
+- **`commands/`** — Custom Claude Code slash commands.
+- **`skills/`** — Custom Claude Code skills.
 
 ---
 
