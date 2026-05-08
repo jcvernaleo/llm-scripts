@@ -19,6 +19,11 @@ Check whether `audit/AUDIT-CHECKLIST.md` exists.
 
 ## Step 2: Verify the build
 
+If `package.json` exists in the project root but `node_modules/` does not, stop
+and report:
+> ✗ `package.json` found but `node_modules/` is missing. Run `npm install` (or
+> `pnpm install` if a `pnpm-lock.yaml` is present) and then re-run `/pre-audit`.
+
 Run `forge build`. If it fails, report the errors and stop — do not proceed until
 the code compiles cleanly.
 
@@ -123,6 +128,11 @@ Create the `audit/round-N/` directory. Move into it:
 Do not move the `audit/round-*/` subdirectories themselves.
 
 ## Step 8: Verify the build
+
+If `package.json` exists in the project root but `node_modules/` does not, stop
+and report:
+> ✗ `package.json` found but `node_modules/` is missing. Run `npm install` (or
+> `pnpm install` if a `pnpm-lock.yaml` is present) and then re-run `/pre-audit`.
 
 Run `forge build`. If it fails, report the errors and stop — do not proceed
 until the code compiles cleanly.
