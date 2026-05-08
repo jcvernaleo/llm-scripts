@@ -118,25 +118,16 @@ SSH agent socket and git configuration are also forwarded from the host automati
 
 ## Claude Code commands and skills
 
-### Session management commands
+The `commands/` directory contains custom slash command definitions to install in `~/.claude/commands/`.
 
-The `commands/` directory contains custom slash command definitions to install in `~/.claude/commands/`. They provide session state persistence across Claude Code sessions:
+### Workspace management
 
 | Command | Description |
 |---------|-------------|
 | `/status` | Show current project state (reads CLAUDE.md, TODO.md, session state) |
-| `/resume` | Reload context from the last saved session and suggest next steps |
-| `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
-| `/sessions` | List recent sessions across all projects |
 | `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
-| `/pre-audit` | Verify build, run ToB analysis, and produce an ordered audit checklist; auto-detects re-audits |
-| `/audit` | Smart contract security audit using the SCAR methodology |
-| `/audit-report` | Combine all audit rounds into a single formatted PDF |
-| `/full-audit` | Run the complete pipeline: pre-audit, audit every checklist item, generate PDF |
 
-Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
-
-### `/new-workspace`
+#### `/new-workspace`
 
 Bootstraps a new umbrella workspace for managing multiple related repos together:
 
@@ -149,7 +140,26 @@ Bootstraps a new umbrella workspace for managing multiple related repos together
 
 Usage: run `/new-workspace <project-name>` in an empty directory. If no name is given, it will prompt you.
 
-### `/pre-audit`
+### Session management
+
+| Command | Description |
+|---------|-------------|
+| `/resume` | Reload context from the last saved session and suggest next steps |
+| `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
+| `/sessions` | List recent sessions across all projects |
+
+Session notes are stored globally at `~/.claude/sessions/<project-name>/` so context persists across terminal sessions and machines.
+
+### Smart contract audit
+
+| Command | Description |
+|---------|-------------|
+| `/pre-audit` | Verify build, run ToB analysis, and produce an ordered audit checklist; auto-detects re-audits |
+| `/audit` | Smart contract security audit using the SCAR methodology |
+| `/audit-report` | Combine all audit rounds into a single formatted PDF |
+| `/full-audit` | Run the complete pipeline: pre-audit, audit every checklist item, generate PDF |
+
+#### `/pre-audit`
 
 Run before `/audit` to verify the project builds and produce a structured audit plan.
 Auto-detects whether this is a first-time audit or a follow-up:
@@ -168,7 +178,7 @@ saving output to `audit/tob-prep.md` and `audit/tob-maturity.md`.
 Usage: run `/pre-audit` from the project root with no arguments — before the first
 audit and again after the author has addressed findings.
 
-### `/audit`
+#### `/audit`
 
 Performs a smart contract security audit using the SCAR methodology (Scan, Classify, Analyze, Report):
 
@@ -184,7 +194,7 @@ Usage: pass a single Solidity file or a directory of contracts as the argument.
 /audit src/
 ```
 
-### `/audit-report`
+#### `/audit-report`
 
 Generates a single combined PDF from all audit rounds once the current round is complete:
 
@@ -195,7 +205,7 @@ Generates a single combined PDF from all audit rounds once the current round is 
 
 Usage: run `/audit-report` from the project root with no arguments after all `/audit` runs are complete.
 
-### `/full-audit`
+#### `/full-audit`
 
 Runs the entire audit pipeline in one command:
 
