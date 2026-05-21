@@ -12,45 +12,8 @@ which maps conversation UUIDs to project names.
 
 import json
 import sys
-import os
 import argparse
 from datetime import datetime, timezone
-
-
-def load_project_map(projects_dir):
-    """
-    Build a map of conversation UUID -> project name from the projects directory.
-    Each subdirectory in projects/ is a project; each contains a conversations.json
-    with a list of conversation UUIDs.
-    """
-    project_map = {}
-    if not projects_dir or not os.path.isdir(projects_dir):
-        return project_map
-
-    for entry in os.scandir(projects_dir):
-        if not entry.is_dir():
-            continue
-        # Try to find the project name from a project.json or similar
-        project_name = None
-        project_json = os.path.join(entry.path, "project.json")
-        if os.path.exists(project_json):
-            with open(project_json) as f:
-                data = json.load(f)
-                project_name = data.get("name", entry.name)
-        else:
-            project_name = entry.name
-
-        # Map each conversation UUID in this project
-        conv_json = os.path.join(entry.path, "conversations.json")
-        if os.path.exists(conv_json):
-            with open(conv_json) as f:
-                convs = json.load(f)
-                for c in convs:
-                    uuid = c.get("uuid") or c.get("id")
-                    if uuid:
-                        project_map[uuid] = project_name
-
-    return project_map
 
 
 def parse_date(date_str):
@@ -83,14 +46,13 @@ def first_human_message(conversation):
     return ""
 
 
-def make_org_entry(conv, project_map):
+def make_org_entry(conv):
     """Generate a single org entry string for a conversation."""
     uuid = conv["uuid"]
     name = conv.get("name", "Untitled").strip()
     created = parse_date(conv.get("created_at", ""))
     updated = parse_date(conv.get("updated_at", ""))
     url = f"https://claude.ai/chat/{uuid}"
-    project = project_map.get(uuid, "")
     summary = conv.get("summary", "").strip()
     opening = first_human_message(conv)
 
@@ -101,8 +63,7 @@ def make_org_entry(conv, project_map):
     lines.append(f"* ACTIVE {name} :ai:")
     lines.append(f"  :PROPERTIES:")
     lines.append(f"  :URL:      {url}")
-    if project:
-        lines.append(f"  :PROJECT:  {project}")
+    lines.append(f"  :PROJECT:  ")
     if created_str:
         lines.append(f"  :OPENED:   {created_str}")
     if updated_str:
@@ -135,7 +96,6 @@ def make_org_entry(conv, project_map):
 def main():
     parser = argparse.ArgumentParser(description="Convert Claude export to org-mode")
     parser.add_argument("conversations", help="Path to conversations.json")
-    parser.add_argument("projects_dir", nargs="?", help="Path to projects/ directory")
     parser.add_argument("--after", help="Only include conversations updated after this date (YYYY-MM-DD)")
     parser.add_argument("--state", default="ACTIVE",
                         help="TODO state to assign (default: ACTIVE)")
@@ -143,8 +103,6 @@ def main():
 
     with open(args.conversations) as f:
         conversations = json.load(f)
-
-    project_map = load_project_map(args.projects_dir)
 
     after_dt = None
     if args.after:
@@ -168,7 +126,7 @@ def main():
             skipped += 1
             continue
 
-        print(make_org_entry(conv, project_map))
+        print(make_org_entry(conv))
         count += 1
 
     sys.stderr.write(f"Wrote {count} entries")
