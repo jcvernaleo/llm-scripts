@@ -130,18 +130,8 @@ lang_postinstall_terraform='RUN TERRAFORM_VERSION=$(wget -qO- https://checkpoint
     sudo unzip -o /tmp/terraform.zip terraform -d /usr/local/bin/ && \
     sudo chmod +x /usr/local/bin/terraform && \
     rm /tmp/terraform.zip'
-_lang_postinstall_foundry='RUN sudo apk add --no-cache --virtual .foundry-build build-base openssl-dev pkgconf linux-headers libusb-dev && \
-    sudo apk add --no-cache libusb && \
-    curl --proto '"'"'=https'"'"' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path && \
-    PATH="/home/ai/.cargo/bin:$PATH" CARGO_HOME=/tmp/cbuild OPENSSL_NO_VENDOR=1 /home/ai/.cargo/bin/cargo install \
-        --locked --git https://github.com/foundry-rs/foundry \
-        forge cast anvil chisel && \
-    mkdir -p /home/ai/.foundry/bin && \
-    mv /tmp/cbuild/bin/forge /tmp/cbuild/bin/cast \
-       /tmp/cbuild/bin/anvil /tmp/cbuild/bin/chisel \
-       /home/ai/.foundry/bin/ && \
-    sudo apk del .foundry-build && \
-    rm -rf /tmp/cbuild /home/ai/.cargo /home/ai/.rustup && \
+_lang_postinstall_foundry='RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /home/ai/.foundry/bin/foundryup --platform alpine && \
     echo '"'"'export PATH="/home/ai/.foundry/bin:$PATH"'"'"' >> /home/ai/.bashrc && \
     SOLC_VERSION=$(wget -qO- https://api.github.com/repos/ethereum/solidity/releases/latest | jq -r '"'"'.tag_name'"'"' | sed '"'"'s/^v//'"'"') && \
     sudo wget -qO /usr/local/bin/solc "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux" && \

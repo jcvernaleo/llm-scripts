@@ -12,6 +12,8 @@
 
 5. **Improve security** — Possibly move firewall rules to the host instead of inside the container; explore best approach.
 
+5a. ~~**Faster solidity image builds**~~ — **Done.** Switched from `cargo install` (Rust compile from source) to `foundryup` (pre-built binaries). Eliminates 10–20 min compile time and build fragility.
+
 6. ~~**Web vulnerability checking commands**~~ — **Done.** Added five web security skills (`/vuln-scan`, `/sqli-deep`, `/authz-review`, `/secrets-audit`, `/depcheck`) to `skills/`.
 
 7. **Migrate commands to skills** — Move `.claude/commands/*.md` files to `.claude/skills/<name>/SKILL.md` format. Low priority; existing commands work fine.
