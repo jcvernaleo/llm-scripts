@@ -516,7 +516,7 @@ RUN echo '"'"'export PATH="/home/ai/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /hom
 
     # Create Dockerfile
     cat > "$devcontainer_dir/Dockerfile" << DOCKERFILE
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Backend: $backend_name
 

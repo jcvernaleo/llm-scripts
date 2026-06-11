@@ -8,7 +8,9 @@
 
 3. **Better host tool integration** — Integrate with tmux, emacs, etc. so users don't have to manually set up sessions before starting work (related to item 1).
 
-4. **Switch to native Claude installer** — Blocked by musl 1.2.5 in Alpine 3.23; revert from npm install once musl 1.2.6+ is available.
+4a. ~~**Bump base image to Alpine 3.24**~~ — **Done.** Alpine 3.24 released 2026-06-09; ships musl 1.2.6 which unblocks the native Claude installer.
+
+4b. **Switch to native Claude installer** — Unblocked by Alpine 3.24 / musl 1.2.6. Replace npm install workaround with the official Claude Code installer binary.
 
 5. **Improve security** — Possibly move firewall rules to the host instead of inside the container; explore best approach.
 
