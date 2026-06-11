@@ -162,6 +162,7 @@ FIREWALL_DOMAINS_BACKEND_CLAUDE=(
     "api.anthropic.com"
     "anthropic.com"
     "claude.ai"
+    "downloads.claude.ai"
     "api.statsig.com"
     "statsigapi.net"
     "sentry.io"
@@ -487,12 +488,12 @@ $extra_postinstall"
     case "$backend" in
         claude)
             backend_name="Claude Code"
-            backend_install='# Install Claude Code via npm (native installer binary is incompatible with Alpine musl)
-RUN npm install -g --prefix /home/ai/.local @anthropic-ai/claude-code
+            backend_install='# Install Claude Code via native installer
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Add Claude to PATH (installed to ~/.local/bin)
 ENV PATH="/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-# Use system ripgrep (required on Alpine/musl)
+# Use system ripgrep (required on Alpine/musl — libgcc/libstdc++ already installed)
 ENV USE_BUILTIN_RIPGREP=0
 RUN echo '"'"'export PATH="/home/ai/.local/bin:$PATH"'"'"' >> /home/ai/.bashrc'
             ;;

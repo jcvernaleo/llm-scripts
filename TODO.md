@@ -10,7 +10,7 @@
 
 4a. ~~**Bump base image to Alpine 3.24**~~ — **Done.** Alpine 3.24 released 2026-06-09; ships musl 1.2.6 which unblocks the native Claude installer.
 
-4b. **Switch to native Claude installer** — Unblocked by Alpine 3.24 / musl 1.2.6. Replace npm install workaround with the official Claude Code installer binary.
+4b. ~~**Switch to native Claude installer**~~ — **Done.** Replaced npm install workaround with `curl -fsSL https://claude.ai/install.sh | bash`. Requires musl 1.2.6+ (Alpine 3.24). Added `downloads.claude.ai` to firewall allowlist for auto-updates.
 
 5. **Improve security** — Possibly move firewall rules to the host instead of inside the container; explore best approach.
 
