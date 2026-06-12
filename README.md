@@ -68,7 +68,7 @@ For projects where you want to customize the generated Dockerfile before buildin
 | `claude` | Claude Code — Anthropic's AI coding assistant (default) |
 | `opencode` | OpenCode — open-source, supports Anthropic, OpenAI, Google, Groq, OpenRouter |
 
-The selected backend and language are saved to `.devcontainer/.backend` and `.devcontainer/.lang` and used automatically on subsequent commands.
+The selected backend and language are saved to `.devcontainer/.backend` and `.devcontainer/.lang`, and port mappings are saved to `.devcontainer/.ports`. All are used automatically on subsequent commands.
 
 ### Network firewall
 
@@ -89,6 +89,18 @@ To disable the firewall:
 ```bash
 ./ai-devcontainer.sh code --port 3000:3000 --port 8080:8080 ~/projects/myapp
 ```
+
+Port mappings are saved to `.devcontainer/.ports` and reused automatically on subsequent starts, so you don't need to re-specify them when returning to a project:
+
+```bash
+# First time — sets ports and saves them
+./ai-devcontainer.sh code --port 3000:3000 --port 8080:8080 ~/projects/myapp
+
+# Later — ports are restored automatically
+./ai-devcontainer.sh code ~/projects/myapp
+```
+
+Passing `--port` again replaces the saved list entirely.
 
 ### Environment variables
 

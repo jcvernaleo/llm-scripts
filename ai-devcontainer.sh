@@ -818,7 +818,18 @@ cmd_start() {
     project_dir=$(get_project_dir "${project_dir:-.}")
     local container_name
     container_name=$(container_name_for_project "$project_dir")
-    
+
+    # Save or load persisted ports
+    local ports_file="$project_dir/.devcontainer/.ports"
+    if [[ ${#ports[@]} -gt 0 ]]; then
+        printf '%s\n' "${ports[@]}" > "$ports_file"
+    elif [[ -f "$ports_file" ]]; then
+        mapfile -t ports < "$ports_file"
+        for port in "${ports[@]}"; do
+            log_info "Loaded saved port mapping: $port"
+        done
+    fi
+
     # Read backend from stored file
     local backend="claude"
     local backend_file="$project_dir/.devcontainer/.backend"
@@ -1170,6 +1181,8 @@ Options for init/code/shell:
 Options for start/code/shell:
   --port, -p PORT       Forward a port (HOST:CONTAINER format)
                         Can be specified multiple times
+                        Ports are saved to .devcontainer/.ports and reused automatically
+                        on subsequent starts; passing --port replaces the saved list
   --open-network, -O    Disable firewall restrictions (allow full internet access)
                         By default, network is restricted to essential domains
 
