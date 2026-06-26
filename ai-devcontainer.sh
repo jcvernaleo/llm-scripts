@@ -700,6 +700,7 @@ cmd_build() {
     project_dir=$(get_project_dir "${1:-.}")
     local dockerfile="$project_dir/.devcontainer/Dockerfile"
     local backend_file="$project_dir/.devcontainer/.backend"
+    local lang_file="$project_dir/.devcontainer/.lang"
 
     if [[ ! -f "$dockerfile" ]]; then
         log_error "No Dockerfile found at $dockerfile"
@@ -707,13 +708,17 @@ cmd_build() {
         exit 1
     fi
 
-    # Read backend from stored file
+    # Read backend and lang from stored files
     local backend="claude"
     if [[ -f "$backend_file" ]]; then
         backend=$(cat "$backend_file")
     fi
-    
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+    local lang="base"
+    if [[ -f "$lang_file" ]]; then
+        lang=$(cat "$lang_file")
+    fi
+
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
 
     log_info "Building image from $dockerfile"
     $ENGINE build \
@@ -749,7 +754,7 @@ cmd_update() {
         lang=$(cat "$lang_file")
     fi
 
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
     local container_name
     container_name=$(container_name_for_project "$project_dir")
 
@@ -830,14 +835,19 @@ cmd_start() {
         done
     fi
 
-    # Read backend from stored file
+    # Read backend and lang from stored files
     local backend="claude"
     local backend_file="$project_dir/.devcontainer/.backend"
     if [[ -f "$backend_file" ]]; then
         backend=$(cat "$backend_file")
     fi
-    
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend}"
+    local lang="base"
+    local lang_file_start="$project_dir/.devcontainer/.lang"
+    if [[ -f "$lang_file_start" ]]; then
+        lang=$(cat "$lang_file_start")
+    fi
+
+    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
     local config_dir="$HOME/.claude"
     [[ "$backend" == "opencode" ]] && config_dir="$HOME/.opencode"
 
@@ -932,11 +942,6 @@ cmd_start() {
 
     # Set up firewall by default (unless --open-network)
     if [[ "$open_network" != "true" ]]; then
-        local lang="base"
-        local lang_file="$project_dir/.devcontainer/.lang"
-        if [[ -f "$lang_file" ]]; then
-            lang=$(cat "$lang_file")
-        fi
         setup_container_firewall "$container_name" "$lang" "$backend"
     else
         log_warn "Network restrictions disabled - container has full internet access"
