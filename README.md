@@ -25,11 +25,11 @@ Spins up a Podman (or Docker) container with an AI coding assistant and a contro
 ./ai-devcontainer.sh code ~/projects/myapp
 ```
 
-For projects where you want to customize the generated Dockerfile before building:
+For projects that need extra Alpine packages beyond the language defaults:
 
 ```bash
-./ai-devcontainer.sh init --lang go ~/projects/myapp
-# ... edit .devcontainer/Dockerfile ...
+./ai-devcontainer.sh init --lang rust ~/projects/myapp
+echo "libvirt-dev python3" > ~/projects/myapp/.devcontainer/.extra-packages
 ./ai-devcontainer.sh code ~/projects/myapp
 ```
 
@@ -68,7 +68,7 @@ For projects where you want to customize the generated Dockerfile before buildin
 | `claude` | Claude Code — Anthropic's AI coding assistant (default) |
 | `opencode` | OpenCode — open-source, supports Anthropic, OpenAI, Google, Groq, OpenRouter |
 
-The selected backend and language are saved to `.devcontainer/.backend` and `.devcontainer/.lang`, and port mappings are saved to `.devcontainer/.ports`. All are used automatically on subsequent commands.
+The selected backend and language are saved to `.devcontainer/.backend` and `.devcontainer/.lang`, port mappings to `.devcontainer/.ports`, and project-specific packages to `.devcontainer/.extra-packages`. All are committed with the project and used automatically on subsequent commands.
 
 ### Network firewall
 
@@ -101,6 +101,23 @@ Port mappings are saved to `.devcontainer/.ports` and reused automatically on su
 ```
 
 Passing `--port` again replaces the saved list entirely.
+
+### Project-specific packages
+
+To add Alpine packages beyond what the selected language provides, create `.devcontainer/.extra-packages` in the project directory (one package per line, `#` comments supported):
+
+```
+# needed for libvirt Rust bindings
+libvirt-dev
+python3
+```
+
+```bash
+# Pick up changes to .extra-packages by rebuilding
+./ai-devcontainer.sh update ~/projects/myapp
+```
+
+The package list is incorporated into the image name (via a short content hash), so projects with different extra packages never share an image. Projects with no `.extra-packages` file are unaffected.
 
 ### Environment variables
 

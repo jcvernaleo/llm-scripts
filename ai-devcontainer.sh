@@ -76,6 +76,32 @@ image_exists() {
     $ENGINE image inspect "$name" &>/dev/null
 }
 
+# Compute image name for a given backend/lang/devcontainer_dir.
+# Appends a short hash of the .extra-packages content when present so
+# projects with different extra packages never share an image.
+get_image_name() {
+    local backend="$1"
+    local lang="$2"
+    local devcontainer_dir="$3"
+    if [[ -n "${AI_DEVCONTAINER_IMAGE:-}" ]]; then
+        echo "$AI_DEVCONTAINER_IMAGE"
+        return
+    fi
+    local base="ai-devcontainer-$backend-$lang"
+    local extra_packages_file="$devcontainer_dir/.extra-packages"
+    if [[ -f "$extra_packages_file" ]]; then
+        local pkgs
+        pkgs=$(grep -v '^\s*#' "$extra_packages_file" | tr -s ' \n' '\n' | sort | xargs 2>/dev/null || true)
+        if [[ -n "$pkgs" ]]; then
+            local hash
+            hash=$(printf '%s' "$pkgs" | sha256sum | cut -c1-8)
+            echo "${base}-${hash}"
+            return
+        fi
+    fi
+    echo "$base"
+}
+
 # Check if container is running
 container_running() {
     local name="$1"
@@ -465,6 +491,20 @@ generate_dockerfile() {
 RUN apk add --no-cache $extra_packages"
     fi
 
+    # Read project-specific extra packages from .extra-packages (one package per line)
+    local project_extra_packages=""
+    local extra_packages_file="$devcontainer_dir/.extra-packages"
+    if [[ -f "$extra_packages_file" ]]; then
+        project_extra_packages=$(grep -v '^\s*#' "$extra_packages_file" | tr '\n' ' ' | xargs 2>/dev/null || true)
+    fi
+
+    local apk_project_extras=""
+    if [[ -n "$project_extra_packages" ]]; then
+        apk_project_extras="
+# Project-specific packages (.extra-packages)
+RUN apk add --no-cache $project_extra_packages"
+    fi
+
     # Build the env section
     local env_extras=""
     if [[ -n "$extra_env" ]]; then
@@ -552,6 +592,7 @@ RUN apk add --no-cache \\
     ip6tables \\
     bind-tools
 $apk_extras
+$apk_project_extras
 # Set up non-root user
 ARG USERNAME=ai
 ARG USER_UID=1000
@@ -689,7 +730,7 @@ GITIGNORE
     log_info "  - $devcontainer_dir/devcontainer.json"
     log_info ""
     log_info "Next steps:"
-    log_info "  1. Optionally review/customize: $devcontainer_dir/Dockerfile"
+    log_info "  1. Optionally add project-specific Alpine packages: $devcontainer_dir/.extra-packages"
     log_info "  2. Run: $0 code $project_dir"
     log_info "     (builds automatically on first run)"
 }
@@ -718,7 +759,12 @@ cmd_build() {
         lang=$(cat "$lang_file")
     fi
 
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
+    # Regenerate Dockerfile so .extra-packages changes are always reflected
+    local devcontainer_dir="$project_dir/.devcontainer"
+    generate_dockerfile "$lang" "$backend" "$devcontainer_dir"
+
+    local image_name
+    image_name=$(get_image_name "$backend" "$lang" "$devcontainer_dir")
 
     log_info "Building image from $dockerfile"
     $ENGINE build \
@@ -754,7 +800,8 @@ cmd_update() {
         lang=$(cat "$lang_file")
     fi
 
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
+    local image_name
+    image_name=$(get_image_name "$backend" "$lang" "$devcontainer_dir")
     local container_name
     container_name=$(container_name_for_project "$project_dir")
 
@@ -847,7 +894,8 @@ cmd_start() {
         lang=$(cat "$lang_file_start")
     fi
 
-    local image_name="${AI_DEVCONTAINER_IMAGE:-ai-devcontainer-$backend-$lang}"
+    local image_name
+    image_name=$(get_image_name "$backend" "$lang" "$project_dir/.devcontainer")
     local config_dir="$HOME/.claude"
     [[ "$backend" == "opencode" ]] && config_dir="$HOME/.opencode"
 
