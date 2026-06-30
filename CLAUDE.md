@@ -63,7 +63,7 @@ Install: `cp -r skills/*/  ~/.claude/skills/` (or `cp -r skills/<name> ~/.claude
 
 ## Supported Languages
 
-`base`, `go`, `rust`, `python`, `node`, `emacs`, `solidity`, `all`
+`base`, `go`, `rust`, `python`, `node`, `emacs`, `solidity`, `terraform`, `android`, `all`
 
 ## Supported Backends
 

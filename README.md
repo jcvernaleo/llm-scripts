@@ -59,7 +59,8 @@ echo "libvirt-dev python3" > ~/projects/myapp/.devcontainer/.extra-packages
 | `emacs` | Emacs (for elisp development) |
 | `solidity` | Foundry (forge, cast, anvil, chisel) |
 | `terraform` | Terraform |
-| `all` | Everything above (except solidity and terraform) |
+| `android` | OpenJDK 21 + Android SDK (platform-tools, build-tools 35, API 35) |
+| `all` | Go + Rust + Python + Node.js + Emacs + Solidity/Foundry (terraform and android excluded — both are large, purpose-specific installs) |
 
 ### Backends (`--backend`)
 

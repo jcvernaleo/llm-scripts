@@ -14,7 +14,7 @@
 #   ai-devcontainer.sh langs
 #
 # Supported languages for --lang:
-#   base, go, rust, python, node, emacs, solidity, terraform, all
+#   base, go, rust, python, node, emacs, solidity, terraform, android, all
 #
 # Supported backends for --backend:
 #   claude    Claude Code (default) - Anthropic's AI coding assistant
@@ -125,6 +125,7 @@ lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
 lang_packages_solidity="$lang_packages_node pandoc py3-weasyprint font-dejavu fontconfig"
 lang_packages_terraform=""
+lang_packages_android="openjdk21-jdk"
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_emacs $lang_packages_solidity"
 
 # Language-specific environment variables
@@ -140,6 +141,10 @@ lang_env_emacs=""
 lang_env_solidity="$lang_env_node
 ENV PATH=/home/ai/.foundry/bin:\$PATH"
 lang_env_terraform=""
+lang_env_android="ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+ENV ANDROID_HOME=/home/ai/android-sdk
+ENV ANDROID_SDK_ROOT=/home/ai/android-sdk
+ENV PATH=\$PATH:/home/ai/android-sdk/cmdline-tools/latest/bin:/home/ai/android-sdk/platform-tools"
 lang_env_all="$lang_env_go
 $lang_env_rust
 $lang_env_solidity"
@@ -165,6 +170,18 @@ _lang_postinstall_foundry='RUN curl -L https://foundry.paradigm.xyz | bash && \
 lang_postinstall_solidity="${lang_postinstall_node}
 ${_lang_postinstall_foundry}"
 lang_postinstall_all="$lang_postinstall_solidity"
+# Android SDK cmdline-tools 12.0 (build 11076708); bump version string to update
+lang_postinstall_android='RUN mkdir -p /home/ai/android-sdk/cmdline-tools && \
+    curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \
+        -o /tmp/cmdtools.zip && \
+    unzip -q /tmp/cmdtools.zip -d /home/ai/android-sdk/cmdline-tools && \
+    mv /home/ai/android-sdk/cmdline-tools/cmdline-tools /home/ai/android-sdk/cmdline-tools/latest && \
+    rm /tmp/cmdtools.zip
+RUN yes | /home/ai/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null && \
+    /home/ai/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+        "platform-tools" \
+        "build-tools;35.0.0" \
+        "platforms;android-35"'
 
 # Firewall allowed domains (base domains always allowed)
 FIREWALL_DOMAINS_BASE=(
@@ -280,6 +297,26 @@ FIREWALL_DOMAINS_TERRAFORM=(
     "archivist.terraform.io"
 )
 
+FIREWALL_DOMAINS_ANDROID=(
+    # Android SDK component downloads
+    "dl.google.com"
+    # Google Maven repository (AndroidX, Google Play services, etc.)
+    "maven.google.com"
+    # Google CDN CIDRs: dl.google.com and maven.google.com are served from
+    # Google's CDN infrastructure which rotates IPs across these blocks
+    "142.250.0.0/15"
+    "173.194.0.0/16"
+    "74.125.0.0/16"
+    # Maven Central
+    "repo1.maven.org"
+    "central.sonatype.com"
+    # Gradle wrapper and plugin portal
+    "services.gradle.org"
+    "downloads.gradle.org"
+    "plugins.gradle.org"
+    "cdn.plugins.gradle.org"
+)
+
 # Get firewall domains for a language and backend
 get_firewall_domains() {
     local lang="$1"
@@ -319,6 +356,9 @@ get_firewall_domains() {
             ;;
         terraform)
             domains+=("${FIREWALL_DOMAINS_TERRAFORM[@]}")
+            ;;
+        android)
+            domains+=("${FIREWALL_DOMAINS_ANDROID[@]}")
             ;;
         all)
             domains+=("${FIREWALL_DOMAINS_GO[@]}")
@@ -454,7 +494,9 @@ Supported languages for --lang:
   emacs    Base + Emacs (for elisp development)
   solidity  Base + Foundry (forge, cast, anvil, chisel) + Node.js + pnpm
   terraform Base + Terraform
-  all       Everything: Go + Rust + Python + Node.js/pnpm + Emacs + Foundry
+  android   Base + OpenJDK 21 + Android SDK (platform-tools, build-tools 35, API 35)
+  all       Go + Rust + Python + Node.js/pnpm + Emacs + Solidity/Foundry
+            (terraform and android excluded — both are large, purpose-specific installs)
 
 Supported backends for --backend:
 
@@ -685,7 +727,7 @@ cmd_init() {
 
     # Validate language
     case "$lang" in
-        base|go|rust|python|node|emacs|solidity|terraform|all) ;;
+        base|go|rust|python|node|emacs|solidity|terraform|android|all) ;;
         *)
             log_error "Unknown language: $lang"
             log_error "Run '$0 langs' to see supported languages"
@@ -1226,7 +1268,7 @@ Commands:
 
 Options for init/code/shell:
   --lang, -l LANG       Language environment (default: base)
-                        Supported: base, go, rust, python, node, emacs, solidity, terraform, all
+                        Supported: base, go, rust, python, node, emacs, solidity, terraform, android, all
   --backend, -b BACKEND AI backend (default: claude)
                         Supported: claude, opencode
   (--lang/--backend are used by code/shell only when auto-initializing a new project)

@@ -4,7 +4,7 @@
 
 1. ~~**Smoother session startup**~~ — **Done.** `code` and `shell` now auto-init and auto-build on first run; single command for both fresh and existing projects.
 
-2. **Mobile dev environment** — Add an Android app development language/toolchain option (`--lang android` or similar).
+2. ~~**Mobile dev environment**~~ — **Done.** Added `--lang android`: OpenJDK 21 + Android SDK cmdline-tools + platform-tools + build-tools 35 + API 35 platform.
 
 3. **Better host tool integration** — Integrate with tmux, emacs, etc. so users don't have to manually set up sessions before starting work (related to item 1).
 
