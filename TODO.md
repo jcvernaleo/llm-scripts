@@ -2,6 +2,8 @@
 
 ## Future Ideas (not started)
 
+0. ~~**GitHub CLI access in containers**~~ — **Done.** `~/.config/gh` is mounted from the host at start time (when present), same pattern as SSH agent and git config. `gh` was already in the base image and all required GitHub domains were already in the base firewall allowlist.
+
 1. ~~**Smoother session startup**~~ — **Done.** `code` and `shell` now auto-init and auto-build on first run; single command for both fresh and existing projects.
 
 2. ~~**Mobile dev environment**~~ — **Done.** Added `--lang android`: OpenJDK 21 + Android SDK cmdline-tools + platform-tools + build-tools 35 + API 35 platform.

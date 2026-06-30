@@ -1006,6 +1006,11 @@ cmd_start() {
         run_args+=(-v "$HOME/.claude.json:/home/ai/.claude.json:Z")
     fi
 
+    # Mount gh CLI credentials if present
+    if [[ -d "$HOME/.config/gh" ]]; then
+        run_args+=(-v "$HOME/.config/gh:/home/ai/.config/gh:Z")
+    fi
+
     # Add any SSH agent socket for git operations
     if [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
         run_args+=(

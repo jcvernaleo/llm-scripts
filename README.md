@@ -132,7 +132,7 @@ The package list is incorporated into the image name (via a short content hash),
 | `GROQ_API_KEY` | Passed through to container |
 | `OPENROUTER_API_KEY` | Passed through to container |
 
-SSH agent socket and git configuration are also forwarded from the host automatically.
+SSH agent socket, git configuration, and `gh` CLI credentials (`~/.config/gh`) are also forwarded from the host automatically.
 
 ---
 
