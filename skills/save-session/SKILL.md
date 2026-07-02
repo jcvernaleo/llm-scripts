@@ -1,3 +1,9 @@
+---
+name: save-session
+description: Save the current session state.
+allowed-tools: Bash(git *), Read, Write
+---
+
 Save the current session state.
 
 1. Determine the project identifier:

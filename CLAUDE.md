@@ -40,26 +40,20 @@ The main script dynamically generates a Dockerfile at `init` time and embeds it 
 - **Container naming**: Derived from the project directory basename via `container_name_for_project()`.
 - **Host integration**: SSH agent socket, git config, and API keys are mounted/passed into the container at start.
 
-### Custom Commands (`commands/`)
+### Skills (`skills/`)
 
-Markdown files defining custom Claude Code slash commands for session management:
-- `/status`, `/sessions`, `/resume`, `/save-session`
+Claude Code skills for session management, workspace scaffolding, smart contract auditing, and web security review. Each skill lives in its own subdirectory (`skills/<name>/SKILL.md`) and is invoked as a slash command.
 
-Session state is persisted to `~/.claude/sessions/<project-name>/session-state.md`.
+Session management: `/status`, `/sessions`, `/resume`, `/save-session`
+(Session state is persisted to `~/.claude/sessions/<project-name>/session-state.md`.)
 
-Install: `cp commands/*.md ~/.claude/commands/`
+Workspace: `/new-workspace`
 
-### Security Skills (`skills/`)
+Smart contract audit: `/pre-audit`, `/audit`, `/audit-report`, `/full-audit`
 
-Claude Code skills for web application security review. Each skill lives in its own subdirectory (`skills/<name>/SKILL.md`) and is invoked as a slash command.
+Web security: `/vuln-scan`, `/sqli-deep`, `/authz-review`, `/secrets-audit`, `/depcheck`
 
-- `/vuln-scan` — General web vulnerability scan (XSS, SQLi, SSRF, path traversal, command injection, insecure deserialization, etc.)
-- `/sqli-deep` — Taint-analysis-style deep-dive SQL injection review
-- `/authz-review` — Broken access control, IDOR, and privilege escalation review
-- `/secrets-audit` — Hunt for hardcoded secrets, credentials, and API keys
-- `/depcheck` — Dependency manifest review for dangerous or vulnerable packages
-
-Install: `cp -r skills/*/  ~/.claude/skills/` (or `cp -r skills/<name> ~/.claude/skills/` for individual skills)
+Install: `cp -r skills/* ~/.claude/skills/` (or `cp -r skills/<name> ~/.claude/skills/` for individual skills)
 
 ## Supported Languages
 

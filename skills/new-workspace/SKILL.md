@@ -1,3 +1,10 @@
+---
+name: new-workspace
+description: Create a new multi-repo umbrella workspace in the current directory.
+argument-hint: [project-name]
+allowed-tools: Bash(git *), Bash(mkdir *), Write
+---
+
 Create a new multi-repo umbrella workspace in the current directory.
 
 If $ARGUMENTS is empty, ask the user for a project name before proceeding. Otherwise use $ARGUMENTS as the project name.

@@ -1,3 +1,9 @@
+---
+name: status
+description: Show current project state without taking action.
+allowed-tools: Bash(git *), Read
+---
+
 Show current project state without taking action.
 
 1. Determine the project identifier:

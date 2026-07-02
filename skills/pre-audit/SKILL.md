@@ -1,4 +1,8 @@
-[//]: # (Pre-audit preparation command: verify build and produce an ordered audit checklist. Auto-detects first run vs re-audit.)
+---
+name: pre-audit
+description: Pre-audit preparation: verify build and produce an ordered audit checklist. Auto-detects first run vs re-audit.
+allowed-tools: Bash, Read, Write
+---
 
 Prepare a smart contract audit plan for the project in the current directory.
 

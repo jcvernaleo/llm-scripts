@@ -1,3 +1,9 @@
+---
+name: resume
+description: Resume the project from saved state.
+allowed-tools: Bash(git *), Read
+---
+
 Resume the project from saved state.
 
 1. Determine the project identifier:

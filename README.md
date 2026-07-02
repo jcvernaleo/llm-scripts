@@ -6,8 +6,7 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
-- **`commands/`** — Custom Claude Code slash commands.
-- **`skills/`** — Custom Claude Code skills.
+- **`skills/`** — Custom Claude Code skills (session management, workspace scaffolding, smart contract audit, web security).
 
 ---
 
@@ -146,14 +145,14 @@ SSH agent socket, git configuration, and `gh` CLI credentials (`~/.config/gh`) a
 
 ---
 
-## Claude Code commands and skills
+## Claude Code skills
 
-The `commands/` directory contains custom slash command definitions to install in `~/.claude/commands/`.
+The `skills/` directory contains custom Claude Code skills installable to `~/.claude/skills/`.
 
 ### Workspace management
 
-| Command | Description |
-|---------|-------------|
+| Skill | Description |
+|-------|-------------|
 | `/status` | Show current project state (reads CLAUDE.md, TODO.md, session state) |
 | `/new-workspace` | Scaffold a new multi-repo umbrella workspace in the current directory |
 
@@ -172,8 +171,8 @@ Usage: run `/new-workspace <project-name>` in an empty directory. If no name is 
 
 ### Session management
 
-| Command | Description |
-|---------|-------------|
+| Skill | Description |
+|-------|-------------|
 | `/resume` | Reload context from the last saved session and suggest next steps |
 | `/save-session` | Write a session log and state snapshot to `~/.claude/sessions/<project>/` |
 | `/sessions` | List recent sessions across all projects |
@@ -182,8 +181,8 @@ Session notes are stored globally at `~/.claude/sessions/<project-name>/` so con
 
 ### Smart contract audit
 
-| Command | Description |
-|---------|-------------|
+| Skill | Description |
+|-------|-------------|
 | `/pre-audit` | Verify build, run ToB analysis, and produce an ordered audit checklist; auto-detects re-audits |
 | `/audit` | Smart contract security audit using the SCAR methodology |
 | `/audit-report` | Combine all audit rounds into a single formatted PDF |
@@ -247,15 +246,9 @@ If anything fails (build error, audit error), stops immediately and reports the 
 
 Usage: run `/full-audit` from the project root with no arguments.
 
-To install the commands:
+### Web security
 
-```bash
-cp commands/*.md ~/.claude/commands/
-```
-
-### Web security skills
-
-The `skills/` directory contains Claude Code skills for web application security review, installable to `~/.claude/skills/`. Each is invoked as a slash command and restricts itself to read-only tools:
+Each skill restricts itself to read-only tools and accepts a file or directory as an argument, e.g. `/vuln-scan src/`.
 
 | Skill | Description |
 |-------|-------------|
@@ -265,9 +258,7 @@ The `skills/` directory contains Claude Code skills for web application security
 | `/secrets-audit` | Hunt for hardcoded secrets, credentials, API keys, and tokens (includes git history check) |
 | `/depcheck` | Dependency manifest review for dangerous, deprecated, or vulnerable packages |
 
-All skills accept a file or directory as an argument, e.g. `/vuln-scan src/`.
-
-To install the skills:
+To install all skills:
 
 ```bash
 cp -r skills/* ~/.claude/skills/

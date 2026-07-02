@@ -1,4 +1,8 @@
-[//]: # (Generate a combined PDF report from all audit markdown files.)
+---
+name: audit-report
+description: Generate a combined PDF report from all audit markdown files.
+allowed-tools: Bash, Read, Write
+---
 
 Generate a combined PDF audit report from all markdown files in the `audit/` directory.
 

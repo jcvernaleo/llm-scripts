@@ -1,4 +1,8 @@
-[//]: # (Full audit pipeline: pre-audit, audit each checklist item, then generate the PDF report.)
+---
+name: full-audit
+description: Run the complete audit pipeline: pre-audit, audit each checklist item, generate PDF report.
+allowed-tools: Bash, Read, Write
+---
 
 Run the complete audit pipeline for the project in the current directory.
 

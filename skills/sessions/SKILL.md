@@ -1,3 +1,10 @@
+---
+name: sessions
+description: List recent session logs across all projects.
+argument-hint: [project-name]
+allowed-tools: Bash(find *), Bash(ls *), Read
+---
+
 List recent session logs across all projects.
 
 1. Scan ~/.claude/sessions/ for all project directories

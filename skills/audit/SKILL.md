@@ -1,5 +1,9 @@
-[//]: # (Smart contract audit command using the SCAR methodology.)
-[//]: # (Inspired by: https://aurpay.net/aurspace/smart-contract-auditing-claude-code-security-workflow/)
+---
+name: audit
+description: Perform a smart contract security audit using the SCAR methodology.
+argument-hint: <file-or-directory>
+allowed-tools: Bash(git *), Read, Write
+---
 
 Perform a smart contract security audit using the SCAR methodology on $ARGUMENTS.
 
