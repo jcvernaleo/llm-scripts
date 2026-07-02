@@ -185,13 +185,11 @@ RUN yes | /home/ai/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > 
 
 # Firewall allowed domains (base domains always allowed)
 FIREWALL_DOMAINS_BASE=(
-    # GitHub
-    "github.com"
-    "api.github.com"
-    "raw.githubusercontent.com"
-    "objects.githubusercontent.com"
-    "codeload.github.com"
-    "ssh.github.com"
+    # GitHub (CIDR ranges — covers github.com, api.github.com, ssh.github.com,
+    # codeload.github.com, uploads.github.com, raw/objects.githubusercontent.com)
+    # GitHub rotates IPs within these ranges; CIDRs avoid stale per-IP rules.
+    "140.82.112.0/22"
+    "185.199.108.0/22"
     # Alpine Linux
     "alpinelinux.org"
     "dl-cdn.alpinelinux.org"
