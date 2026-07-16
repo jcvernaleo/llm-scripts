@@ -247,6 +247,9 @@ FIREWALL_DOMAINS_RUST=(
     "crates.io"
     "static.crates.io"
     "index.crates.io"
+    # Fastly CDN CIDR: crates.io index and crate downloads are served from Fastly.
+    # DNS round-robins across 151.101.x.x; allow by CIDR to avoid stale per-IP rules.
+    "151.101.0.0/16"
 )
 
 FIREWALL_DOMAINS_PYTHON=(
