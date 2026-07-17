@@ -664,6 +664,7 @@ $postinstall_extras
 ENV SHELL=/bin/bash
 ENV EDITOR=mg
 ENV VISUAL=mg
+ENV CLAUDE_CODE_DISABLE_MOUSE=1
 $extra_env
 WORKDIR /workspace
 DOCKERFILE
