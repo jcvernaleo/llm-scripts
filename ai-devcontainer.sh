@@ -659,6 +659,9 @@ RUN /bin/mkdir -p /home/ai/.ssh && \\
     /usr/bin/ssh-keyscan -t ed25519,rsa,ecdsa github.com >> /home/ai/.ssh/known_hosts 2>/dev/null && \\
     /bin/chmod 700 /home/ai/.ssh && \\
     /bin/chmod 600 /home/ai/.ssh/known_hosts
+
+# Install gh extensions
+RUN gh extension install github/gh-stack --pin v0.1.0
 $postinstall_extras
 # Set environment
 ENV SHELL=/bin/bash
