@@ -323,7 +323,7 @@ get_firewall_domains() {
     local lang="$1"
     local backend="${2:-claude}"
     local domains=("${FIREWALL_DOMAINS_BASE[@]}")
-    
+
     # Add backend-specific domains
     case "$backend" in
         claude)
@@ -333,7 +333,7 @@ get_firewall_domains() {
             domains+=("${FIREWALL_DOMAINS_BACKEND_OPENCODE[@]}")
             ;;
     esac
-    
+
     # Add language-specific domains
     case "$lang" in
         go)
@@ -370,7 +370,7 @@ get_firewall_domains() {
             domains+=("${FIREWALL_DOMAINS_SOLIDITY[@]}")
             ;;
     esac
-    
+
     printf '%s\n' "${domains[@]}"
 }
 
@@ -378,9 +378,10 @@ get_firewall_domains() {
 generate_firewall_script() {
     local lang="$1"
     local backend="${2:-claude}"
+    local extra_domains="${3:-}"
     local domains
     domains=$(get_firewall_domains "$lang" "$backend")
-    
+
     cat << 'FIREWALL_HEADER'
 #!/bin/bash
 #
@@ -412,11 +413,20 @@ ip6tables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 ALLOWED_DOMAINS=(
 FIREWALL_HEADER
 
-    # Add domains
+    # Add standard domains
     while IFS= read -r domain; do
         echo "    \"$domain\""
     done <<< "$domains"
-    
+
+    # Add project-specific domains from .extra-domains
+    if [[ -n "$extra_domains" ]]; then
+        echo ""
+        echo "    # Project-specific domains (.extra-domains)"
+        while IFS= read -r domain; do
+            [[ -n "$domain" ]] && echo "    \"$domain\""
+        done <<< "$extra_domains"
+    fi
+
     cat << 'FIREWALL_FOOTER'
 )
 
@@ -469,16 +479,26 @@ setup_container_firewall() {
     local container_name="$1"
     local lang="$2"
     local backend="${3:-claude}"
-    
+    local devcontainer_dir="${4:-}"
+
     log_info "Setting up network firewall (restricted mode)"
-    
+
+    # Read project-specific extra domains from .extra-domains (one domain/CIDR per line)
+    local extra_domains=""
+    if [[ -n "$devcontainer_dir" ]]; then
+        local extra_domains_file="$devcontainer_dir/.extra-domains"
+        if [[ -f "$extra_domains_file" ]]; then
+            extra_domains=$(grep -v '^\s*#' "$extra_domains_file" | grep -v '^\s*$' || true)
+        fi
+    fi
+
     # Generate and execute firewall script
     local firewall_script
-    firewall_script=$(generate_firewall_script "$lang" "$backend")
-    
+    firewall_script=$(generate_firewall_script "$lang" "$backend" "$extra_domains")
+
     # Run as root to set up iptables
     echo "$firewall_script" | $ENGINE exec -i "$container_name" sudo bash
-    
+
     log_info "Network restricted to whitelisted domains only"
 }
 
@@ -778,6 +798,7 @@ GITIGNORE
     log_info ""
     log_info "Next steps:"
     log_info "  1. Optionally add project-specific Alpine packages: $devcontainer_dir/.extra-packages"
+    log_info "     Optionally add project-specific firewall domains: $devcontainer_dir/.extra-domains"
     log_info "  2. Run: $0 code $project_dir"
     log_info "     (builds automatically on first run)"
 }
@@ -975,7 +996,7 @@ cmd_start() {
 
     local config_basename
     config_basename=$(basename "$config_dir")
-    
+
     local run_args=(
         -d
         --name "$container_name"
@@ -1042,7 +1063,7 @@ cmd_start() {
 
     # Set up firewall by default (unless --open-network)
     if [[ "$open_network" != "true" ]]; then
-        setup_container_firewall "$container_name" "$lang" "$backend"
+        setup_container_firewall "$container_name" "$lang" "$backend" "$project_dir/.devcontainer"
     else
         log_warn "Network restrictions disabled - container has full internet access"
     fi

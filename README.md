@@ -119,6 +119,24 @@ python3
 
 The package list is incorporated into the image name (via a short content hash), so projects with different extra packages never share an image. Projects with no `.extra-packages` file are unaffected.
 
+### Project-specific firewall domains
+
+To allow additional domains beyond the built-in list for the selected language and backend, create `.devcontainer/.extra-domains` (one domain or CIDR per line, `#` comments supported):
+
+```
+# internal npm registry
+registry.example.com
+# Fastly CDN range used by a private package host
+203.0.113.0/24
+```
+
+The file is read at container start time — no rebuild needed. Stop and restart the container to apply changes:
+
+```bash
+./ai-devcontainer.sh stop ~/projects/myapp
+./ai-devcontainer.sh code ~/projects/myapp
+```
+
 ### Environment variables
 
 | Variable | Description |
