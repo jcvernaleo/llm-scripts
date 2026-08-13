@@ -634,15 +634,7 @@ RUN apk add --no-cache \\
     sudo \\
     ca-certificates \\
     ripgrep \\
-    fd \\
-    fzf \\
-    tree \\
-    htop \\
     bash \\
-    mandoc \\
-    man-pages \\
-    less \\
-    procps \\
     openssh-client \\
     mg \\
     github-cli \\
