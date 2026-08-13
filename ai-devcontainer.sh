@@ -121,6 +121,9 @@ lang_packages_base=""
 lang_packages_go="go make"
 lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
+# Note: nodejs/npm may need to move back to the base image if we start relying
+# on MCP servers, which commonly launch via `npx` regardless of --lang. Not
+# currently in use, so kept lang-scoped for now.
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
 lang_packages_solidity="$lang_packages_node jq pandoc py3-weasyprint font-dejavu fontconfig"
@@ -646,8 +649,6 @@ RUN apk add --no-cache \\
     gcompat \\
     libgcc \\
     libstdc++ \\
-    nodejs \\
-    npm \\
     iptables \\
     ip6tables \\
     bind-tools
