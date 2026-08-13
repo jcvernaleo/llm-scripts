@@ -123,9 +123,9 @@ lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
-lang_packages_solidity="$lang_packages_node pandoc py3-weasyprint font-dejavu fontconfig"
-lang_packages_terraform=""
-lang_packages_android="openjdk21-jdk"
+lang_packages_solidity="$lang_packages_node jq pandoc py3-weasyprint font-dejavu fontconfig"
+lang_packages_terraform="jq unzip"
+lang_packages_android="openjdk21-jdk unzip"
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_emacs $lang_packages_solidity"
 
 # Language-specific environment variables
@@ -633,12 +633,9 @@ RUN apk add --no-cache \\
     ripgrep \\
     fd \\
     fzf \\
-    jq \\
     tree \\
     htop \\
-    unzip \\
     bash \\
-    bash-completion \\
     mandoc \\
     man-pages \\
     less \\

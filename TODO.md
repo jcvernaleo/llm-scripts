@@ -23,3 +23,5 @@
 7. ~~**Migrate commands to skills**~~ — **Done.** Moved all commands to `skills/<name>/SKILL.md` format; removed `commands/` directory; updated README and CLAUDE.md.
 
 8. ~~**Pre-audit improvement**~~ — **Done.** `/pre-audit` now detects missing `node_modules` when `package.json` is present and stops with an actionable error.
+
+9. **Trim base image packages** — Move packages only needed by specific languages out of the shared base image and into the relevant `lang_packages_*`/postinstall entries. In progress: `jq` moved to `solidity` and `terraform` (both need it for `wget | jq -r` version lookups); `unzip` moved to `terraform` and `android` (both unzip downloaded archives); `bash-completion` dropped entirely. Still need to check remaining base packages for other single-language-only usage.
