@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Backend: Claude Code
 
@@ -9,29 +9,17 @@ RUN apk add --no-cache \
     sudo \
     ca-certificates \
     ripgrep \
-    fd \
-    fzf \
-    jq \
-    tree \
-    htop \
-    unzip \
     bash \
-    bash-completion \
-    mandoc \
-    man-pages \
-    less \
-    procps \
     openssh-client \
     mg \
     github-cli \
     gcompat \
     libgcc \
     libstdc++ \
-    nodejs \
-    npm \
     iptables \
     ip6tables \
     bind-tools
+
 
 # Set up non-root user
 ARG USERNAME=ai
@@ -49,12 +37,12 @@ RUN mkdir -p /workspace && chown $USER_UID:$USER_GID /workspace
 USER $USERNAME
 WORKDIR /home/$USERNAME
 
-# Install Claude Code via npm (native installer binary is incompatible with Alpine musl)
-RUN npm install -g --prefix /home/ai/.local @anthropic-ai/claude-code
+# Install Claude Code via native installer
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Add Claude to PATH (installed to ~/.local/bin)
 ENV PATH="/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-# Use system ripgrep (required on Alpine/musl)
+# Use system ripgrep (required on Alpine/musl — libgcc/libstdc++ already installed)
 ENV USE_BUILTIN_RIPGREP=0
 RUN echo 'export PATH="/home/ai/.local/bin:$PATH"' >> /home/ai/.bashrc
 
@@ -64,9 +52,13 @@ RUN /bin/mkdir -p /home/ai/.ssh && \
     /bin/chmod 700 /home/ai/.ssh && \
     /bin/chmod 600 /home/ai/.ssh/known_hosts
 
+# Install gh extensions
+RUN gh extension install github/gh-stack --pin v0.1.0
+
 # Set environment
 ENV SHELL=/bin/bash
 ENV EDITOR=mg
 ENV VISUAL=mg
+ENV CLAUDE_CODE_DISABLE_MOUSE=1
 
 WORKDIR /workspace
