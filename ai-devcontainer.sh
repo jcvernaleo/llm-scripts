@@ -622,6 +622,8 @@ RUN echo '"'"'export PATH="/home/ai/go/bin:/usr/local/go/bin:$PATH"'"'"' >> /hom
     esac
 
     # Create Dockerfile
+    # Note: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC also disables feature-flag evaluation,
+    # so Remote Control and other flag-gated features are unavailable in-container.
     cat > "$devcontainer_dir/Dockerfile" << DOCKERFILE
 FROM alpine:3.24
 
@@ -678,6 +680,8 @@ ENV SHELL=/bin/bash
 ENV EDITOR=mg
 ENV VISUAL=mg
 ENV CLAUDE_CODE_DISABLE_MOUSE=1
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+ENV DISABLE_AUTOUPDATER=1
 $extra_env
 WORKDIR /workspace
 DOCKERFILE
