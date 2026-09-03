@@ -40,6 +40,7 @@ The main script dynamically generates a Dockerfile at `init` time and embeds it 
 - **Language modularity**: Language environments (`--lang`) add Alpine packages, ENV variables, and post-install RUN steps via parallel arrays (`lang_packages_*`, `lang_env_*`, `lang_postinstall_*`).
 - **Container naming**: Derived from the project directory basename via `container_name_for_project()`.
 - **Host integration**: SSH agent socket, git config, and API keys are mounted/passed into the container at start.
+- **Claude Code container env vars**: `CLAUDE_CODE_DISABLE_MOUSE=1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `DISABLE_AUTOUPDATER=1` are baked into the generated Dockerfile. Containers are rebuilt often, so auto-update happens at image-build time rather than via background checks; manual `claude update` inside a running container still works. Disabling nonessential traffic also disables feature-flag evaluation, so Remote Control and other flag-gated features are unavailable in-container (accepted tradeoff).
 
 ### Skills (`skills/`)
 
