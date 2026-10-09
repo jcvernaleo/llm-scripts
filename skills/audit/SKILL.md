@@ -41,13 +41,29 @@ Scan for these patterns in every contract:
 - **Informational**: Code quality, gas optimization, documentation gaps
 
 ## Report Format
-For each finding, provide:
-1. Severity tag and title (e.g., `[CRITICAL] Reentrancy in Vault.withdraw()`)
-2. Affected contract, function, and line numbers
-3. Description of the vulnerability
-4. Step-by-step proof of concept
-5. Recommended fix with code
-6. Foundry test case for regression testing
+Keep the report concise.  Scale the detail of each finding to its severity:
+
+| Severity | Description | Proof of concept | Recommended fix | Regression test |
+|---|---|---|---|---|
+| Critical / High | Full | Step-by-step | With code | Foundry test |
+| Medium | Full | Short | With code | Only if the PoC is not obvious |
+| Low | Brief | Brief numbered steps, only if needed to show the issue is real | One or two sentences; code only if a few lines | None |
+| Informational | — | — | — | — |
+
+Informational findings get no section of their own.  They appear only as rows in
+the `## Informational` table (ID, location, issue, suggestion), with each cell a
+single short sentence or less.
+
+Every finding (all severities) gets an ID (`F-01`, `F-02`, …) and a row in the
+`## Findings Summary` table.  Number Critical first, then High, Medium, Low, and
+Informational last.
+
+Do not include:
+- A description of what the contract does or how it is structured
+- A per-check verification table, or a walk through the vulnerability checklist
+  item by item.  The "Areas verified" list replaces both.
+- A closing summary, totals section, or "Top N recommendations" list.  The
+  Findings Summary table already covers this.
 
 ## Output File
 
@@ -72,18 +88,26 @@ The file must be structured as a professional audit report:
 **Commit:** <full git commit hash>
 
 ## Executive Summary
-<overall risk rating, brief description of what was audited, high-level findings>
+**Overall risk:** Critical / High / Medium / Low
+
+<2–4 sentences: the most important result and anything the reader must know.
+Do not describe what the contract does.>
+
+**Areas verified:**
+- <one line per area, at most about 6 bullets, e.g. "Access control on every
+  external function", "All `unchecked` blocks are bounded">
 
 ## Findings Summary
 | ID | Severity | Title |
 |----|----------|-------|
-| F-01 | Critical | ... |
-| F-02 | High | ... |
+| F-01 | High | ... |
+| F-02 | Low | ... |
+| F-03 | Informational | ... |
 ...
 
 ## Findings
 
-### F-01 [CRITICAL] <Title>
+### F-01 [HIGH] <Title>
 **Contract:** `...`
 **Function:** `...`
 **Lines:** ...
@@ -105,16 +129,23 @@ The file must be structured as a professional audit report:
 ```
 
 ---
-(repeat for each finding)
+(repeat for each Critical, High, Medium, and Low finding, omitting the parts
+the Report Format table says to leave out for that severity)
 
-## Summary
-**Total findings:** N (X Critical, X High, X Medium, X Low, X Informational)
-**Overall risk:** Critical / High / Medium / Low
-**Top 3 recommendations:**
-1. ...
-2. ...
-3. ...
+## Informational
+| ID | Location | Issue | Suggestion |
+|----|----------|-------|------------|
+| F-03 | `Vault.sol:42` | ... | ... |
 ```
+
+Omit the `## Findings` section if there are no Critical, High, Medium, or Low
+findings, and omit the `## Informational` section if there are no Informational
+findings.
+
+If there are no findings at all, or the file contains only declarations
+(interfaces, structs, events, errors) with nothing to report, the report is
+just the header block, `**Overall risk:**`, one sentence giving the result, and
+`## Findings Summary` containing `No findings.`
 
 After writing the file, print the path to the report.
 
@@ -146,3 +177,5 @@ After writing the audit report, check if an audit checklist file exists (look fo
 - Flag any function callable by arbitrary addresses
 - If a finding is uncertain, mark it as "Needs Manual Review"
 - The markdown file is mandatory — always write it, even if there are no findings
+- Check everything thoroughly, but write only what the reader needs.  Thorough
+  analysis does not mean a long report.
