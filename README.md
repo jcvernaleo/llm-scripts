@@ -246,7 +246,13 @@ Usage: pass a single Solidity file or a directory of contracts as the argument.
 Generates a single combined PDF from all audit rounds once the current round is complete:
 
 - Checks that every item in `audit/AUDIT-CHECKLIST.md` is checked off; stops with an explanation if any remain incomplete
-- Concatenates the current round's checklist and reports, then appends all prior rounds as appendices in order
+- Lays out the PDF as:
+  1. Report header: date, auditor, repository, commit, scope, and audit round
+  2. Findings summary: severity counts and one combined table of every finding
+  3. Round-over-round comparison (re-audits only)
+  4. Detailed findings from each `/audit` report
+  5. Appendices: Trail of Bits maturity and prep output, then prior rounds in order
+- Leaves the checklist out of the PDF; it is only used for the completeness check and severity totals
 - Converts to a formatted PDF via pandoc and weasyprint (available in the `solidity` container)
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
 
