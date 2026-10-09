@@ -21,7 +21,8 @@ Look for the following in the `audit/` directory:
 - `AUDIT-CHECKLIST.md` — progress tracker (used for the completeness check and
   severity totals only; it is NOT included in the PDF)
 - `audit-*.md` — individual audit reports (include in filename order)
-- `tob-maturity.md`, `tob-prep.md` — Trail of Bits output (appendices, if present)
+- `tob-maturity.md`, `tob-prep.md` — Trail of Bits output (selected sections
+  only go into the appendices, if present)
 
 If no `audit-*.md` files are found, stop and report the error.
 
@@ -172,21 +173,58 @@ Build a single combined markdown document in this order:
      and `**Commit:**` lines (already shown in the report header)
 
 5. **Appendices**:
-   - If `audit/tob-maturity.md` exists, append it under the heading
-     `# Appendix: Code Maturity Assessment (Trail of Bits)`
-   - If `audit/tob-prep.md` exists, append it under the heading
-     `# Appendix: Audit Preparation (Trail of Bits)`
-   - If either file begins with a `#` top-level heading, replace that heading
-     with the appendix heading rather than adding a second one.
+
+   The Trail of Bits files are long and their structure and headings vary
+   between runs, so include only selected sections of each, never the whole
+   file. Identify sections by keyword in the heading (case-insensitive,
+   ignoring numbering such as `2.` or `Step 4:`), and copy each matched section
+   verbatim, including its subsections, up to the next heading of the same or
+   higher level:
+
+   - **From `tob-maturity.md`**, in this order:
+     - the executive summary (heading contains "executive summary")
+     - the scorecard (heading contains "scorecard")
+     - the improvement roadmap (heading contains "roadmap")
+
+     Skip everything else, in particular the per-category detailed analysis,
+     scope, assumptions, and method notes.
+   - **From `tob-prep.md`**, in this order:
+     - static analysis results (heading contains "static analysis"; this may
+       be a subsection of a larger "easy issues" section — take only the
+       static analysis subsection)
+     - the prep checklist (heading contains "checklist"), including any
+       "remaining actions" subsection under it
+     - unavailable tools (heading contains "unavailable" or "not run"), if
+       present
+
+     Skip everything else, in particular review goals, documentation,
+     architecture, diagrams, user stories, invariants, and the glossary.
+
+   If a keyword matches no heading, skip that part silently. Never pull in a
+   larger section to make up for it.
+
+   Within each appendix, demote the copied headings so the largest is `##`
+   (preserving their relative levels) and drop any leading numbering.
+
+   - If `audit/tob-maturity.md` exists, append its selected sections under the
+     heading `# Appendix: Code Maturity Assessment (Trail of Bits)`
+   - If `audit/tob-prep.md` exists, append its selected sections under the
+     heading `# Appendix: Audit Preparation (Trail of Bits)`
+   - At the end of each ToB appendix, add this line (with `tob-prep.md` for
+     the prep appendix):
+
+     ```
+     *Excerpt.  The full output is in `audit/tob-maturity.md`.*
+     ```
    - Prior rounds (if any `audit/round-*/` directories exist), in ascending
      round order (`round-1/`, `round-2/`, etc.). For each round, insert a
      top-level heading `# Appendix: Round N Audit`, then append that round's
      `audit-*.md` files in alphabetical order (with the same header-stripping
      transform as step 4, but using `## Round N Findings: <scope>` as the
-     heading), then its `tob-maturity.md` and `tob-prep.md` (if present),
-     replacing any leading `#` heading in those with
-     `## Round N: Code Maturity Assessment` or `## Round N: Audit Preparation`
-     respectively. Do not include the round's `AUDIT-CHECKLIST.md`.
+     heading). Include only the maturity scorecard from that round's
+     `tob-maturity.md` (if present), under `## Round N: Maturity Scorecard`.
+     Do not include anything from the round's `tob-prep.md` or
+     `AUDIT-CHECKLIST.md`.
 
 Insert a page break before each top-level section after the findings summary
 (each detailed findings report, the round-over-round comparison, and each

@@ -232,7 +232,8 @@ Performs a smart contract security audit using the SCAR methodology (Scan, Class
 - Scans all in-scope contracts for known vulnerability patterns (reentrancy, access control, integer issues, oracle manipulation, etc.)
 - Classifies each finding by severity: Critical, High, Medium, Low, or Informational
 - Traces execution paths for Critical and High findings
-- Produces a structured report with proof of concept, recommended fix, and a Foundry regression test for each finding
+- Produces a concise report whose detail scales with severity: Critical/High findings get a proof of concept, a code fix, and a Foundry regression test; Medium and Low are progressively shorter; Informational findings are one-line table rows
+- Opens with a short executive summary and an "Areas verified" list, with no per-check tables or closing recommendations section
 
 Usage: pass a single Solidity file or a directory of contracts as the argument.
 
@@ -251,7 +252,7 @@ Generates a single combined PDF from all audit rounds once the current round is 
   2. Findings summary: severity counts and one combined table of every finding
   3. Round-over-round comparison (re-audits only)
   4. Detailed findings from each `/audit` report
-  5. Appendices: Trail of Bits maturity and prep output, then prior rounds in order
+  5. Appendices: excerpts of the Trail of Bits output (maturity executive summary, scorecard and roadmap; prep static analysis and checklist), then prior rounds in order
 - Leaves the checklist out of the PDF; it is only used for the completeness check and severity totals
 - Converts to a formatted PDF via pandoc and weasyprint (available in the `solidity` container)
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
