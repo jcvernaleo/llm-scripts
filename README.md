@@ -265,7 +265,7 @@ Generates a single combined PDF from all audit rounds once the current round is 
   4. Detailed findings from each `/audit` report
   5. Appendices: excerpts of the Trail of Bits output (maturity executive summary, scorecard and roadmap; prep static analysis and checklist), then prior rounds in order
 - Leaves the checklist out of the PDF; it is only used for the completeness check and severity totals
-- Converts to a formatted PDF via pandoc and weasyprint (available in the `solidity` container)
+- Converts to a formatted A4 PDF via pandoc and weasyprint (available in the `solidity` container); long code, paths and table cells wrap so nothing runs past the page margins
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
 
 Usage: run `/audit-report` from the project root with no arguments after all `/audit` runs are complete.

@@ -89,9 +89,26 @@
     - Verified here: the generated RUN step installs cleanly, `slither --version` prints 0.11.6, the installed venv's `pip freeze` matches the pins exactly, and the temp constraints file is removed.  `slither` on a real contract could not be tested here (no `solc`, and the solc download hosts aren't allowlisted in a `base` container).
     - Host test (2026-10-12): `--lang solidity` image builds; `slither --version` = 0.11.6; `which solc` = `/usr/local/bin/solc` (0.8.37); `slither .` on a fresh `forge init` project compiles through forge and reports 1 result (solc-version), as expected.
 
-    **Phase 2 — Docs** — Done 2026-10-12.
+    **Phase 2 — Docs** — Done, signed off 2026-10-12.
     - README language table and `langs`/usage text: mention Slither under `solidity`.
     - README: how to bump Slither (run `misc/slither-constraints.sh`, paste output, rebuild).
     - CLAUDE.md if needed.  Mark this item done (and fold in the item 11 TODO update).
 
-13. **Audit PDF content overflows the page** — Some content in the `/audit-report` PDF runs past the page margins.  Likely causes in the stylesheet (`skills/audit-report/SKILL.md` Step 3): `pre { overflow-x: auto; }` scrolls on screen but just clips in print, so long code lines run off the page.  Also, long unbroken inline `code` (paths, hashes, selectors) and wide tables (e.g. the 4-column Informational table) don't wrap.  Possible fixes: `pre { white-space: pre-wrap; overflow-wrap: anywhere; }`, `code { overflow-wrap: anywhere; }`, `table { table-layout: fixed; }` with `td { overflow-wrap: anywhere; }`, and an explicit `@page` size/margin.  Find the overflowing pages in a real PDF first to confirm which of these it is.
+13. ~~**Audit PDF content overflows the page**~~ — **Done.**  Fixed 2026-10-12.  Some content in the `/audit-report` PDF runs past the page margins.  Likely causes in the stylesheet (`skills/audit-report/SKILL.md` Step 3): `pre { overflow-x: auto; }` scrolls on screen but just clips in print, so long code lines run off the page.  Also, long unbroken inline `code` (paths, hashes, selectors) and wide tables (e.g. the 4-column Informational table) don't wrap.  Possible fixes: `pre { white-space: pre-wrap; overflow-wrap: anywhere; }`, `code { overflow-wrap: anywhere; }`, `table { table-layout: fixed; }` with `td { overflow-wrap: anywhere; }`, and an explicit `@page` size/margin.  Find the overflowing pages in a real PDF first to confirm which of these it is.
+
+    **Findings (2026-10-12)**, from `audit/audit-report-20261012.pdf`, a real 11-file report.  No poppler in the container, so the page streams were inflated by hand and their drawing coordinates checked.
+    - The page is 794px wide (A4).  With weasyprint's default 75px margin and the body's `2em` padding, the content box runs from x=104 to x=689 (585px).
+    - On 9 pages, *tables* are drawn 652–885px wide.  The worst reaches x=990, past the page edge, so its right-hand column is lost, not just clipped at the margin.
+    - Cause: unbreakable inline `code` in cells (e.g. `PermissionedLendingPool.sol:406-425,494-518` in the Informational tables' Location column).  Auto table layout won't shrink a column below its longest unbreakable word, so the whole table grows past the page.
+    - `pre` is not a problem in this PDF.  Highlighted blocks (e.g. ```` ```solidity ````) already wrap in print because of pandoc's highlighting CSS.  An unlabelled ```` ``` ```` block with long lines would still clip, though.
+
+    **Phase 1 — Stylesheet fix (`skills/audit-report/SKILL.md` Step 3)**
+    - `code { overflow-wrap: anywhere; }`, and the same on `th, td`.  Unlike `break-word`, `anywhere` lowers the min-content width, so auto-layout tables can fit the page.  Keep auto layout (not `table-layout: fixed`), so the narrow ID/Severity columns stay narrow.
+    - `pre`: replace `overflow-x: auto` with `white-space: pre-wrap; overflow-wrap: anywhere;` (and the same on `pre code`), so unlabelled code blocks wrap rather than clip.
+    - Add an explicit `@page { size: A4; margin: 2cm; }`, and drop the screen-oriented `max-width: 900px; margin: 0 auto; padding: 2em` from `body`.  This gives back about 60px of width and makes the layout explicit rather than relying on weasyprint defaults.
+    - Test (needs weasyprint: the host or a `solidity` container, since this container can't install it): regenerate the PDF from the same `audit/` files and confirm no table runs past the margin, and that the Informational tables are still readable.  The stream-coordinate check used above can be repeated to verify: no `re`/`Tm` x beyond the right content edge.
+
+    **Phase 1 status (2026-10-12)** — Done, signed off 2026-10-12.  Host test: the PDF was regenerated from the same `audit/` files and looks fine by eye.  The stream-coordinate check finds nothing past the content box (x 83.6–710.1, about 627px wide, up from 585px) on any of the 45 page streams, and nothing below the page bottom.  Before the fix, tables reached x=990.
+
+    **Phase 2 — Docs** — Done, signed off 2026-10-12.
+    - README `/audit-report` section: notes the A4 layout and wrapping.  CLAUDE.md needed no change (it doesn't describe the stylesheet).  Item marked done.

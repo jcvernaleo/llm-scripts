@@ -31,14 +31,16 @@ If no `audit-*.md` files are found, stop and report the error.
 Write the following stylesheet to `/tmp/audit-report.css`:
 
 ```css
+@page {
+    size: A4;
+    margin: 2cm;
+}
+
 body {
     font-family: "DejaVu Sans", sans-serif;
     font-size: 11pt;
     line-height: 1.5;
     color: #1a1a1a;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 2em;
 }
 
 h1 { font-size: 2em; border-bottom: 2px solid #333; padding-bottom: 0.3em; }
@@ -51,19 +53,22 @@ code {
     background: #f4f4f4;
     padding: 0.1em 0.3em;
     border-radius: 3px;
+    overflow-wrap: anywhere;
 }
 
 pre {
     background: #f4f4f4;
     border-left: 3px solid #ccc;
     padding: 1em;
-    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     font-size: 0.85em;
 }
 
 pre code {
     background: none;
     padding: 0;
+    white-space: pre-wrap;
 }
 
 table {
@@ -76,6 +81,7 @@ th, td {
     border: 1px solid #ccc;
     padding: 0.4em 0.8em;
     text-align: left;
+    overflow-wrap: anywhere;
 }
 
 th { background: #f0f0f0; font-weight: bold; }
