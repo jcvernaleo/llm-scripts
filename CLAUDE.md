@@ -24,6 +24,9 @@ This repository contains shell scripts and configuration for managing isolated A
 ./clone-all.sh [repos.txt]   # Clone repos listed in repos.txt into repos/
 ./status-all.sh              # Show git status for all repos in repos/
 ./update-all.sh              # Fast-forward all repos in repos/
+
+# Regenerate pinned Slither deps (run on host; needs podman/docker)
+misc/slither-constraints.sh <slither-version>
 ```
 
 ## Architecture
@@ -38,6 +41,7 @@ The main script dynamically generates a Dockerfile at `init` time and embeds it 
 - **Project-specific firewall domains**: `.devcontainer/.extra-domains` (one domain or CIDR per line, `#` comments allowed) is read at container start time by `setup_container_firewall()` and appended to the `ALLOWED_DOMAINS` list in the generated firewall script. No rebuild needed; restart the container to apply changes.
 - **Network firewall**: Default-deny iptables rules are applied inside the container at start time. Allowed domains are assembled from base + backend-specific + language-specific domain arrays defined at the top of the script (`FIREWALL_DOMAINS_*`). Use `--open-network` to disable.
 - **Language modularity**: Language environments (`--lang`) add Alpine packages, ENV variables, and post-install RUN steps via parallel arrays (`lang_packages_*`, `lang_env_*`, `lang_postinstall_*`).
+- **Slither (solidity lang)**: Installed with `pipx install --global` (venv in `/opt/pipx`, commands in `/usr/local/bin`) so it is on PATH for both backends.  Slither and every transitive dependency are pinned inline in `SLITHER_VERSION`/`SLITHER_CONSTRAINTS`, because the build context is the project's `.devcontainer/` and a separate constraints file would not reach it.  The generated Dockerfile writes the list to a temp file and installs with `PIP_CONSTRAINT`.  Regenerate the list with `misc/slither-constraints.sh`.  pipx does not expose `solc-select`'s `solc` shim, so the static `/usr/local/bin/solc` stays in effect.
 - **Container naming**: Derived from the project directory basename via `container_name_for_project()`.
 - **Host integration**: SSH agent socket, git config, and API keys are mounted/passed into the container at start.
 - **Claude Code container env vars**: `CLAUDE_CODE_DISABLE_MOUSE=1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `DISABLE_AUTOUPDATER=1` are baked into the generated Dockerfile. Containers are rebuilt often, so auto-update happens at image-build time rather than via background checks; manual `claude update` inside a running container still works. Disabling nonessential traffic also disables feature-flag evaluation, so Remote Control and other flag-gated features are unavailable in-container (accepted tradeoff).

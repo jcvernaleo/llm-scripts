@@ -1,0 +1,4 @@
+# PyPI: needed to generate Slither's pinned dependency list
+# (misc/slither-constraints.sh / pip freeze) from inside this container
+pypi.org
+files.pythonhosted.org

@@ -28,7 +28,7 @@
 
 10. ~~**Opt out of nonessential Claude Code traffic/auto-update**~~ — **Done.** Added `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and `DISABLE_AUTOUPDATER=1` to the generated Dockerfile, per official devcontainer guidance (code.claude.com/docs/en/devcontainer). Containers are rebuilt regularly, so updates happening at image-build time (rather than via background checks) is intended; manual `claude update` inside a running container still works. Note: disabling nonessential traffic also disables feature-flag evaluation, so Remote Control and other flag-gated features are unavailable in-container — accepted tradeoff. Considered but declined: pinning the Claude Code CLI version itself (native installer always grabs latest; would require switching back to npm install to pin) and `/etc/claude-code/managed-settings.json` for org policy — both left as-is, not worth pursuing currently.
 
-11. **Audit skill fixes** — In progress on branch `jcv_audit-skill-fixes`.  The final PDF is hard to read and much too long (e.g. a 57-page report with only a few Informational findings).
+11. ~~**Audit skill fixes**~~ — **Done.**  Merged 2026-10-09 (PR #1, `39d104c`).  The final PDF was hard to read and much too long (e.g. a 57-page report with only a few Informational findings).
 
     **Phase 1 — Reorder the PDF (`skills/audit-report/SKILL.md`)** — Done, signed off 2026-10-09 (`2295675`).
     - New order for the combined document:
@@ -62,6 +62,36 @@
     - Update README.md and CLAUDE.md wherever they describe the audit report layout.
     - Reinstall the skills (`cp -r skills/audit skills/audit-report ~/.claude/skills/`) and test on a real audit directory if one is available.
 
-12. **Install Slither in the `solidity` lang** — Slither is useful for contract analysis, and `/pre-audit`'s ToB prep step already looks for it (in the Safe-gaurd sample, `tob-prep.md` had to substitute `forge lint`).  Install `slither-analyzer` at a pinned version (probably via pip/pipx, which needs `python3`/`py3-pip` added to `lang_packages_solidity`).  Check that it works with the static `solc` binary already installed, and add any PyPI domains it needs to the solidity firewall allowlist.  `all` picks it up through solidity.
+12. ~~**Install Slither in the `solidity` lang**~~ — **Done.**  Slither 0.11.6 with all transitive dependencies pinned, installed via `pipx install --global`; regenerate pins with `misc/slither-constraints.sh`.  Slither is useful for contract analysis, and `/pre-audit`'s ToB prep step already looks for it (in the Safe-gaurd sample, `tob-prep.md` had to substitute `forge lint`).  Install `slither-analyzer` at a pinned version (probably via pip/pipx, which needs `python3`/`py3-pip` added to `lang_packages_solidity`).  Check that it works with the static `solc` binary already installed, and add any PyPI domains it needs to the solidity firewall allowlist.  `all` picks it up through solidity.
+
+    **Findings**
+    - Latest release is `slither-analyzer` 0.11.6 (2026-07-28).  Requires Python >= 3.10 and supports 3.14.
+    - Dependencies: crytic-compile (`<0.5`), web3 7.x, eth-abi/eth-typing/eth-utils, pycryptodome, prettytable.  crytic-compile pulls in `solc-select`, which installs its own `solc` shim.
+    - Alpine's Python is externally managed (PEP 668), so a plain `pip install` fails.  Install into an isolated environment instead.
+    - The image is built without the firewall (it is applied at `start`), so PyPI only has to be reachable at build time.  At runtime Slither calls `forge`/`solc` locally.  It only goes online if `solc-select` downloads a compiler, and that uses `binaries.soliditylang.org`, which is already allowed.  So no new firewall domains are expected.
+
+    **Decision (2026-10-12):** pin Slither *and* all its transitive dependencies (reproducibility over convenience; regenerating on each bump is acceptable).
+
+    **Phase 1 — Install (`ai-devcontainer.sh`, `misc/`)**
+    - Add `pipx` (pulls in `python3`) to `lang_packages_solidity`.
+    - The build context is the project's `.devcontainer/`, not this repo, so a constraints file next to the script won't reach the build.  Instead, keep the pinned list (`pip freeze` output, `name==version` per line) in a `SLITHER_CONSTRAINTS` variable in `ai-devcontainer.sh`, with the Slither version at the top.  The generated Dockerfile writes it to `/tmp/slither-constraints.txt` and runs `PIP_CONSTRAINT=/tmp/slither-constraints.txt pipx install slither-analyzer==<ver>`.  The pins are also visible in the committed Dockerfile.
+    - Add `misc/slither-constraints.sh <version>` to regenerate the list.  It runs a throwaway `alpine:3.24` container with `$AI_DEVCONTAINER_ENGINE` (default podman), installs Slither via pipx, and prints the venv's `pip freeze`.  Run it on the host (this dev container has no engine or PyPI access) and paste the output into the script.  Same Alpine release and Python as the image, so the pins resolve to the same wheels/builds.
+    - Add a `_lang_postinstall_slither` step and add it to `lang_postinstall_solidity` so `all` gets it too.
+    - Not doing hash pinning (`--require-hashes`): musl/source builds make per-file hashes brittle.  Version pins only.
+    - Make sure the static `/usr/local/bin/solc` wins over `solc-select`'s shim in `~/.local/bin` (check PATH order).  Otherwise `solc` would start pointing at a solc-select-managed version with no compiler installed.  (Resolved: not exposed by pipx, see status below.)
+    - Some transitive dependencies may have no musl wheels and need a C build (e.g. `ckzg`, `bitarray`).  If the build fails, add `build-base python3-dev` only for the install step, or permanently if that's simpler.
+    - Test (on the host): run `misc/slither-constraints.sh 0.11.6` and paste the result in, then `build --lang solidity` on a scratch project, then inside the container run `slither --version`, `solc --version` (still the static binary), and `slither .` on a small Foundry project.
+
+    **Phase 1 status (2026-10-12)** — Done, signed off 2026-10-12.
+    - Pins generated in this container (Alpine 3.24.2, Python 3.14.8): 47 packages, all with musl wheels, so no `build-base`/`python3-dev` is needed.
+    - Changed from the plan: install with `pipx install --global` (venv in `/opt/pipx`, commands in `/usr/local/bin`) instead of per-user `~/.local/bin`.  The opencode backend's PATH doesn't include `~/.local/bin`.
+    - The `solc` shim is a non-issue.  pipx only exposes Slither's own commands, so `solc-select`'s `solc` stays inside the venv.
+    - Verified here: the generated RUN step installs cleanly, `slither --version` prints 0.11.6, the installed venv's `pip freeze` matches the pins exactly, and the temp constraints file is removed.  `slither` on a real contract could not be tested here (no `solc`, and the solc download hosts aren't allowlisted in a `base` container).
+    - Host test (2026-10-12): `--lang solidity` image builds; `slither --version` = 0.11.6; `which solc` = `/usr/local/bin/solc` (0.8.37); `slither .` on a fresh `forge init` project compiles through forge and reports 1 result (solc-version), as expected.
+
+    **Phase 2 — Docs** — Done 2026-10-12.
+    - README language table and `langs`/usage text: mention Slither under `solidity`.
+    - README: how to bump Slither (run `misc/slither-constraints.sh`, paste output, rebuild).
+    - CLAUDE.md if needed.  Mark this item done (and fold in the item 11 TODO update).
 
 13. **Audit PDF content overflows the page** — Some content in the `/audit-report` PDF runs past the page margins.  Likely causes in the stylesheet (`skills/audit-report/SKILL.md` Step 3): `pre { overflow-x: auto; }` scrolls on screen but just clips in print, so long code lines run off the page.  Also, long unbroken inline `code` (paths, hashes, selectors) and wide tables (e.g. the 4-column Informational table) don't wrap.  Possible fixes: `pre { white-space: pre-wrap; overflow-wrap: anywhere; }`, `code { overflow-wrap: anywhere; }`, `table { table-layout: fixed; }` with `td { overflow-wrap: anywhere; }`, and an explicit `@page` size/margin.  Find the overflowing pages in a real PDF first to confirm which of these it is.

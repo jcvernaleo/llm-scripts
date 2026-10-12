@@ -6,6 +6,7 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
+- **`misc/slither-constraints.sh`** — Regenerates the pinned Slither dependency list used by the `solidity` image.
 - **`skills/`** — Custom Claude Code skills (session management, workspace scaffolding, smart contract audit, web security).
 
 ---
@@ -56,10 +57,20 @@ echo "libvirt-dev python3" > ~/projects/myapp/.devcontainer/.extra-packages
 | `python` | Python 3 + pip + virtualenv |
 | `node` | Node.js + npm + pnpm |
 | `emacs` | Emacs (for elisp development) |
-| `solidity` | Foundry (forge, cast, anvil, chisel) |
+| `solidity` | Foundry (forge, cast, anvil, chisel) + Slither |
 | `terraform` | Terraform |
 | `android` | OpenJDK 21 + Android SDK (platform-tools, build-tools 35, API 35) |
-| `all` | Go + Rust + Python + Node.js + Emacs + Solidity/Foundry (terraform and android excluded — both are large, purpose-specific installs) |
+| `all` | Go + Rust + Python + Node.js + Emacs + Solidity/Foundry/Slither (terraform and android excluded — both are large, purpose-specific installs) |
+
+#### Updating Slither
+
+Slither and all of its Python dependencies are pinned in `ai-devcontainer.sh` (`SLITHER_VERSION` and `SLITHER_CONSTRAINTS`).  To move to a new release, run this on the host (it needs Podman or Docker):
+
+```bash
+misc/slither-constraints.sh 0.11.7
+```
+
+It installs that version in a throwaway `alpine:3.24` container and prints the resolved `name==version` list.  Paste the output into `SLITHER_CONSTRAINTS`, set `SLITHER_VERSION` to match, then rebuild existing projects with `./ai-devcontainer.sh update`.
 
 ### Backends (`--backend`)
 
@@ -218,8 +229,8 @@ Auto-detects whether this is a first-time audit or a follow-up:
   `audit/round-N/`, re-runs ToB analysis on the updated code, and generates a
   new checklist annotated with prior findings (e.g. `← Round 1: 1 High, 2 Low`)
 
-Both paths run the Trail of Bits `audit-prep-assistant` (Slither, static analysis)
-and `code-maturity-assessor` (9-category scorecard) if the plugin is installed,
+Both paths run the Trail of Bits `audit-prep-assistant` (Slither, static analysis;
+Slither is preinstalled in the `solidity` container) and `code-maturity-assessor` (9-category scorecard) if the plugin is installed,
 saving output to `audit/tob-prep.md` and `audit/tob-maturity.md`.
 
 Usage: run `/pre-audit` from the project root with no arguments — before the first

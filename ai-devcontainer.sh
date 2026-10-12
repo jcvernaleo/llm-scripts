@@ -126,7 +126,7 @@ lang_packages_python="python3 py3-pip py3-virtualenv"
 # currently in use, so kept lang-scoped for now.
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
-lang_packages_solidity="$lang_packages_node jq pandoc py3-weasyprint font-dejavu fontconfig"
+lang_packages_solidity="$lang_packages_node jq pandoc py3-weasyprint font-dejavu fontconfig pipx"
 lang_packages_terraform="jq unzip"
 lang_packages_android="openjdk21-jdk unzip"
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_emacs $lang_packages_solidity"
@@ -170,8 +170,69 @@ _lang_postinstall_foundry='RUN curl -L https://foundry.paradigm.xyz | bash && \
     SOLC_VERSION=$(wget -qO- https://api.github.com/repos/ethereum/solidity/releases/latest | jq -r '"'"'.tag_name'"'"' | sed '"'"'s/^v//'"'"') && \
     sudo wget -qO /usr/local/bin/solc "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux" && \
     sudo chmod +x /usr/local/bin/solc'
+# Slither, with all transitive dependencies pinned.  Regenerate the list with
+# misc/slither-constraints.sh <version> (pip freeze output) when bumping.
+SLITHER_VERSION="0.11.6"
+SLITHER_CONSTRAINTS="\
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.5
+aiosignal==1.4.0
+annotated-types==0.8.0
+attrs==26.1.0
+bitarray==3.12.1
+cbor2==6.1.5
+certifi==2026.7.22
+charset-normalizer==3.5.2
+ckzg==2.1.8
+crytic-compile==0.4.2
+cytoolz==1.2.0
+eth-account==0.14.0
+eth-hash==0.8.0
+eth-keyfile==0.10.0
+eth-keys==0.8.0
+eth-rlp==3.0.0
+eth-typing==6.0.0
+eth-utils==6.0.0
+eth_abi==6.0.0
+frozenlist==1.8.0
+hexbytes==2.0.0
+idna==3.20
+multidict==7.1.0
+packaging==26.3
+parsimonious==0.10.0
+prettytable==3.18.0
+propcache==0.5.4
+py-ecc==8.0.0
+pycryptodome==3.24.1
+pydantic==2.14.1
+pydantic_core==2.50.1
+pyunormalize==18.0.0
+regex==2026.9.29
+requests==2.34.2
+rlp==5.0.0
+slither-analyzer==0.11.6
+solc-select==1.2.0
+toolz==1.2.0
+types-requests==2.33.0.20261006
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+urllib3==2.8.0
+wcwidth==0.9.2
+web3==7.16.0
+websockets==15.0.1
+yarl==1.25.1"
+# Installed globally (/opt/pipx, binaries in /usr/local/bin) so it is on PATH for
+# every backend.  pipx only exposes Slither's own commands, so solc-select's solc
+# shim does not shadow the static /usr/local/bin/solc.
+_lang_postinstall_slither="RUN printf '%s\\n' \\
+$(sed "s/.*/        '&' \\\\/" <<< "$SLITHER_CONSTRAINTS")
+        > /tmp/slither-constraints.txt && \\
+    sudo env PIP_CONSTRAINT=/tmp/slither-constraints.txt PIP_NO_CACHE_DIR=1 \\
+        pipx install --global slither-analyzer==$SLITHER_VERSION && \\
+    rm /tmp/slither-constraints.txt"
 lang_postinstall_solidity="${lang_postinstall_node}
-${_lang_postinstall_foundry}"
+${_lang_postinstall_foundry}
+${_lang_postinstall_slither}"
 lang_postinstall_all="$lang_postinstall_solidity"
 # Android SDK cmdline-tools 12.0 (build 11076708); bump version string to update
 lang_postinstall_android='RUN mkdir -p /home/ai/android-sdk/cmdline-tools && \
@@ -516,10 +577,10 @@ Supported languages for --lang:
   python   Base + Python 3 + pip + virtualenv
   node     Base + Node.js + npm + pnpm
   emacs    Base + Emacs (for elisp development)
-  solidity  Base + Foundry (forge, cast, anvil, chisel) + Node.js + pnpm
+  solidity  Base + Foundry (forge, cast, anvil, chisel) + Slither + Node.js + pnpm
   terraform Base + Terraform
   android   Base + OpenJDK 21 + Android SDK (platform-tools, build-tools 35, API 35)
-  all       Go + Rust + Python + Node.js/pnpm + Emacs + Solidity/Foundry
+  all       Go + Rust + Python + Node.js/pnpm + Emacs + Solidity/Foundry/Slither
             (terraform and android excluded — both are large, purpose-specific installs)
 
 Supported backends for --backend:
