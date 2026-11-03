@@ -55,7 +55,7 @@ Session management: `/status`, `/sessions`, `/resume`, `/save-session`
 
 Workspace: `/new-workspace`
 
-Smart contract audit: `/pre-audit`, `/audit`, `/audit-report`, `/full-audit`
+Smart contract audit: `/pre-audit`, `/audit`, `/audit-report`, `/audit-brief`, `/full-audit`
 
 Web security: `/vuln-scan`, `/sqli-deep`, `/authz-review`, `/secrets-audit`, `/depcheck`
 

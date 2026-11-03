@@ -1,6 +1,6 @@
 ---
 name: full-audit
-description: Run the complete audit pipeline: pre-audit, audit each checklist item, generate PDF report.
+description: Run the complete audit pipeline: pre-audit, audit each checklist item, generate the full and brief PDF reports.
 allowed-tools: Bash, Read, Write
 ---
 
@@ -37,10 +37,18 @@ For each unchecked item:
 ## Step 4: Generate report
 
 Invoke the `audit-report` skill. Wait for it to complete fully.
+If it fails, stop here and report the error.
 
-## Step 5: Report
+## Step 5: Generate brief report
+
+Invoke the `audit-brief` skill. Wait for it to complete fully.
+If it fails, report the error, but still print the Step 6 summary (the full
+report was already generated).
+
+## Step 6: Report
 
 Print a summary:
 - How many items were audited this run
-- Path to the generated PDF
+- Path to the generated full PDF
+- Path to the generated brief PDF (or the error, if Step 5 failed)
 - Total findings (from the checklist's `**Total:**` line)

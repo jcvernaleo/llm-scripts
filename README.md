@@ -215,7 +215,8 @@ Session notes are stored globally at `~/.claude/sessions/<project-name>/` so con
 | `/pre-audit` | Verify build, run ToB analysis, and produce an ordered audit checklist; auto-detects re-audits |
 | `/audit` | Smart contract security audit using the SCAR methodology |
 | `/audit-report` | Combine all audit rounds into a single formatted PDF |
-| `/full-audit` | Run the complete pipeline: pre-audit, audit every checklist item, generate PDF |
+| `/audit-brief` | Short PDF with the basic info table and only Critical, High, and Medium findings |
+| `/full-audit` | Run the complete pipeline: pre-audit, audit every checklist item, generate the full and brief PDFs |
 
 #### `/pre-audit`
 
@@ -270,15 +271,32 @@ Generates a single combined PDF from all audit rounds once the current round is 
 
 Usage: run `/audit-report` from the project root with no arguments after all `/audit` runs are complete.
 
+#### `/audit-brief`
+
+Generates a short companion PDF to the full `/audit-report` PDF, for readers who only need the key results:
+
+- Has the same completeness check as `/audit-report`, and also needs the full report: uses the newest `audit/audit-report-*.pdf`, and stops if there is none.  Warns (but continues) if any `audit-*.md` is newer than that PDF
+- Lays out the PDF as:
+  1. The basic info table from the full report, plus a **Full report** row naming the full PDF
+  2. Critical, High, and Medium counts, and a table of those findings, with the same IDs as the full report (e.g. `Vault F-01`)
+  3. The full write-up of each Critical, High, and Medium finding
+  4. A closing note pointing to the full report for Low and Informational findings, executive summaries, the round-over-round comparison, and appendices
+- Covers the current round only
+- Uses the same A4 layout as `/audit-report`, and writes `audit/audit-brief-<date>.pdf`
+
+Usage: run `/audit-brief` from the project root with no arguments after `/audit-report`.
+
 #### `/full-audit`
 
 Runs the entire audit pipeline in one command:
 
-- **No prior checklist** → runs `/pre-audit`, audits every checklist item in order, then generates the PDF
-- **Incomplete checklist** → resumes from the first unchecked item (skips pre-audit), then generates the PDF
-- **Complete checklist** → runs `/pre-audit` (re-audit path: archives round, fresh checklist), audits every item, then generates the PDF
+- **No prior checklist** → runs `/pre-audit`, audits every checklist item in order, then generates the PDFs
+- **Incomplete checklist** → resumes from the first unchecked item (skips pre-audit), then generates the PDFs
+- **Complete checklist** → runs `/pre-audit` (re-audit path: archives round, fresh checklist), audits every item, then generates the PDFs
 
-If anything fails (build error, audit error), stops immediately and reports the failure.
+The PDFs are the full report (`/audit-report`) followed by the brief report (`/audit-brief`).
+
+If anything fails (build error, audit error, full report error), stops immediately and reports the failure.  If only the brief report fails, it reports the error but still prints the summary, since the full PDF was already written.
 
 Usage: run `/full-audit` from the project root with no arguments.
 

@@ -113,7 +113,7 @@
     **Phase 2 — Docs** — Done, signed off 2026-10-12.
     - README `/audit-report` section: notes the A4 layout and wrapping.  CLAUDE.md needed no change (it doesn't describe the stylesheet).  Item marked done.
 
-14. **Brief audit report** — Add a short PDF alongside the full `/audit-report` PDF, for readers who only need the key results.  It holds just the basic info table and the Critical, High, and Medium findings, and names the full report file.  New `/audit-brief` skill, called by `/full-audit` after `/audit-report`.
+14. ~~**Brief audit report**~~ — **Done.**  New `/audit-brief` skill, run by `/full-audit` after `/audit-report`.  Add a short PDF alongside the full `/audit-report` PDF, for readers who only need the key results.  It holds just the basic info table and the Critical, High, and Medium findings, and names the full report file.  New `/audit-brief` skill, called by `/full-audit` after `/audit-report`.
 
     **Phase 1 — `/audit-brief` skill (`skills/audit-brief/SKILL.md`)**
     - Preconditions, same as `/audit-report`: the checklist exists and is complete, and at least one current-round `audit-*.md` exists.  Also needs the full PDF: use the newest `audit/audit-report-*.pdf`.  If there is none, stop and tell the user to run `/audit-report` first.  If any current-round `audit-*.md` is newer than that PDF, warn that the full report may be out of date and continue.
@@ -135,7 +135,12 @@
     **Phase 2 — Wire into `/full-audit`**
     - New step after "Generate report": invoke `/audit-brief`.
     - The final summary prints both PDF paths.
+    - If `/audit-report` fails, stop (as before).  If `/audit-brief` fails, report the error but still print the summary, since the full PDF already exists.
+
+    **Phase 2 status (2026-11-03)** — Done, signed off 2026-11-03.
 
     **Phase 3 — Docs**
     - README: a `/audit-brief` section, an entry in the skill table, and the updated `/full-audit` description.
     - CLAUDE.md: add `/audit-brief` to the smart contract audit skill list.  Mark this item done.
+
+    **Phase 3 status (2026-11-03)** — Done, signed off 2026-11-03.
