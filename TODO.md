@@ -112,3 +112,30 @@
 
     **Phase 2 — Docs** — Done, signed off 2026-10-12.
     - README `/audit-report` section: notes the A4 layout and wrapping.  CLAUDE.md needed no change (it doesn't describe the stylesheet).  Item marked done.
+
+14. **Brief audit report** — Add a short PDF alongside the full `/audit-report` PDF, for readers who only need the key results.  It holds just the basic info table and the Critical, High, and Medium findings, and names the full report file.  New `/audit-brief` skill, called by `/full-audit` after `/audit-report`.
+
+    **Phase 1 — `/audit-brief` skill (`skills/audit-brief/SKILL.md`)**
+    - Preconditions, same as `/audit-report`: the checklist exists and is complete, and at least one current-round `audit-*.md` exists.  Also needs the full PDF: use the newest `audit/audit-report-*.pdf`.  If there is none, stop and tell the user to run `/audit-report` first.  If any current-round `audit-*.md` is newer than that PDF, warn that the full report may be out of date and continue.
+    - Output: `audit/audit-brief-<YYYYMMDD>.pdf`.  Title: "Smart Contract Audit Report (Brief)".
+    - Contents, in order:
+      1. Basic info table: the same header table as the full report (report date, audit date(s), auditor, repository, commit, scope, audit round), plus a **Full report** row naming the full PDF's filename (e.g. `audit-report-20261103.pdf`).
+      2. A severity count table for Critical, High, and Medium only, from the checklist's `**Total:**` line.
+      3. A combined findings table of the Critical/High/Medium findings only, with the same scope-prefixed IDs as the full report (`Vault F-01`), so IDs match between the two PDFs.  If there are none, write `No Critical, High, or Medium findings.` and skip item 4.
+      4. Each Critical/High/Medium finding's full write-up (the `### F-NN [SEVERITY] ...` section, up to the next `###`/`##`), copied from its per-file report.  Grouped by severity, then report filename, then ID.  They go under a `# Findings` heading, and each heading becomes `## <scope> F-NN [SEVERITY] ...` so it matches the table.
+      5. A closing note: Low and Informational findings, the executive summaries, round-over-round comparison, and appendices are in the full report, `audit/<full report filename>`.
+    - Leaves out: Low/Informational findings, per-file executive summaries, round comparison, prior rounds, ToB appendices.
+    - Same stylesheet as `/audit-report` (copied into the skill; the two skills don't share files) and the same pandoc → weasyprint pipeline, success check, no-fallback rule, and temp-file cleanup (temp names `/tmp/audit-brief.*` so they don't collide).
+    - Current round only.
+    - Also added: a one-line note under the info table saying the brief covers Critical–Medium only, naming the full report.
+
+    **Phase 1 status (2026-11-03)** — Done, signed off 2026-11-03.
+    - Test: run `/audit-brief` against a real `audit/` directory (needs weasyprint, so on the host or in a `solidity` container), and check that the Full report row and the closing note name the right file, the IDs match the full PDF, and no Low/Informational findings appear.
+
+    **Phase 2 — Wire into `/full-audit`**
+    - New step after "Generate report": invoke `/audit-brief`.
+    - The final summary prints both PDF paths.
+
+    **Phase 3 — Docs**
+    - README: a `/audit-brief` section, an entry in the skill table, and the updated `/full-audit` description.
+    - CLAUDE.md: add `/audit-brief` to the smart contract audit skill list.  Mark this item done.
