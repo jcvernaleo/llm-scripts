@@ -118,7 +118,9 @@ get_project_dir() {
 
 # Language-specific package lists
 lang_packages_base=""
-lang_packages_go="go make"
+# pandoc + weasyprint render the /audit-report and /audit-brief PDFs
+_lang_packages_pdf="pandoc py3-weasyprint font-dejavu fontconfig"
+lang_packages_go="go make $_lang_packages_pdf"
 lang_packages_rust="rust cargo make"
 lang_packages_python="python3 py3-pip py3-virtualenv"
 # Note: nodejs/npm may need to move back to the base image if we start relying
@@ -126,7 +128,7 @@ lang_packages_python="python3 py3-pip py3-virtualenv"
 # currently in use, so kept lang-scoped for now.
 lang_packages_node="nodejs npm"
 lang_packages_emacs="emacs emacs-nox"
-lang_packages_solidity="$lang_packages_node jq pandoc py3-weasyprint font-dejavu fontconfig pipx"
+lang_packages_solidity="$lang_packages_node jq $_lang_packages_pdf pipx"
 lang_packages_terraform="jq unzip"
 lang_packages_android="openjdk21-jdk unzip"
 lang_packages_all="$lang_packages_go $lang_packages_rust $lang_packages_python $lang_packages_emacs $lang_packages_solidity"
@@ -154,7 +156,15 @@ $lang_env_solidity"
 
 # Language-specific post-install commands (run as ai user)
 lang_postinstall_base=""
-lang_postinstall_go=""
+# Go review tools, used by /pre-review.  `go install mod@version` also pins
+# their dependencies, via each tool's go.sum.  staticcheck v0.8.2 = 2026.2.2.
+STATICCHECK_VERSION="v0.8.2"
+GOSEC_VERSION="v2.30.0"
+GOVULNCHECK_VERSION="v1.10.0"
+lang_postinstall_go="RUN go install honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION} && \\
+    go install github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION} && \\
+    go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} && \\
+    go clean -cache -modcache"
 lang_postinstall_rust=""
 lang_postinstall_python=""
 lang_postinstall_node="RUN wget -qO- https://get.pnpm.io/install.sh | ENV=\"\$HOME/.bashrc\" SHELL=/bin/bash sh -"
@@ -233,7 +243,8 @@ $(sed "s/.*/        '&' \\\\/" <<< "$SLITHER_CONSTRAINTS")
 lang_postinstall_solidity="${lang_postinstall_node}
 ${_lang_postinstall_foundry}
 ${_lang_postinstall_slither}"
-lang_postinstall_all="$lang_postinstall_solidity"
+lang_postinstall_all="${lang_postinstall_go}
+${lang_postinstall_solidity}"
 # Android SDK cmdline-tools 12.0 (build 11076708); bump version string to update
 lang_postinstall_android='RUN mkdir -p /home/ai/android-sdk/cmdline-tools && \
     curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \
@@ -299,6 +310,8 @@ FIREWALL_DOMAINS_GO=(
     "proxy.golang.org"
     "sum.golang.org"
     "storage.googleapis.com"
+    # Go vulnerability database, fetched by govulncheck at run time
+    "vuln.go.dev"
     # Google CDN CIDRs: proxy.golang.org and storage.googleapis.com use Google's CDN
     # which rotates across IPs in these registered Google-owned blocks. Allowing by
     # CIDR is more reliable than resolving at startup.

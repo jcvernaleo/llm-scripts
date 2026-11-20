@@ -1,17 +1,43 @@
 ---
 name: audit-brief
-description: Generate a brief PDF audit report with only the basic info table and the Critical, High, and Medium findings.
+description: Generate a brief PDF audit or review report with only the basic info table and the Critical, High, and Medium findings.
+argument-hint: [directory]
 allowed-tools: Bash, Read, Write
 ---
 
-Generate a brief PDF audit report from the current round's markdown files in
-the `audit/` directory.  The brief report is a short companion to the full
+Generate a brief PDF report from the current round's markdown files in an
+audit or review directory.  The brief report is a short companion to the full
 `/audit-report` PDF: it holds only the basic info table and the Critical, High,
 and Medium findings, and names the full report file for everything else.
 
+## Step 0: Resolve the report directory
+
+Take the directory from `$ARGUMENTS`, dropping any trailing `/`.  If
+`$ARGUMENTS` is empty, use `audit`.  Call it `<dir>` below.
+
+`<dir>` must be `audit` (Solidity, written by `/audit`) or `review-<lang>`
+(written by `/review-<lang>`, e.g. `review-go`).  If it is anything else, or the
+directory does not exist, stop and report the error.
+
+Set these from `<dir>` (the same values `/audit-report` uses):
+
+| `<dir>` | `<title>` | `<kind>` | `<auditor label>` |
+|---|---|---|---|
+| `audit` | `Smart Contract Audit Report` | `Audit` | `Auditor` |
+| `review-go` | `Go Code Review Report` | `Review` | `Reviewer` |
+| `review-rust` | `Rust Code Review Report` | `Review` | `Reviewer` |
+| `review-js` | `JavaScript Code Review Report` | `Review` | `Reviewer` |
+
+For any other `review-<lang>`, use `<Lang> Code Review Report` with the
+language name capitalized, `Review`, and `Reviewer`.
+
+All files below are read from and written to `<dir>/`.  The per-file reports
+are named `audit-*.md` and the checklist `AUDIT-CHECKLIST.md` in every
+directory, including review directories.
+
 ## Step 1: Check checklist completion
 
-Read `audit/AUDIT-CHECKLIST.md`. If it does not exist, stop and report that no
+Read `<dir>/AUDIT-CHECKLIST.md`. If it does not exist, stop and report that no
 checklist was found.
 
 Scan the `## Progress` section for any unchecked items (`- [ ]`). If any are
@@ -20,22 +46,24 @@ not be generated until all audit items are checked off.
 
 ## Step 2: Locate files
 
-Look for the following in the `audit/` directory (not in `audit/round-*/`):
+Look for the following in the `<dir>/` directory (not in `<dir>/round-*/`):
 - `AUDIT-CHECKLIST.md` — used for the completeness check and severity totals
   only; it is NOT included in the PDF
 - `audit-*.md` — the current round's individual audit reports
-- `audit-report-*.pdf` — the full report.  Use the newest one (the highest
-  `YYYYMMDD` in the filename).  Call its filename (without the `audit/`
-  directory) the *full report filename*, e.g. `audit-report-20261103.pdf`.
+- `<dir>-report-*.pdf` — the full report.  Use the newest one (the highest
+  `YYYYMMDD` in the filename).  Call its filename (without the `<dir>/`
+  directory) the *full report filename*, e.g. `audit-report-20261103.pdf` or
+  `review-go-report-20261103.pdf`.
 
 If no `audit-*.md` files are found, stop and report the error.
 
-If no `audit-report-*.pdf` is found, stop and tell the user to run
-`/audit-report` first, since the brief report must name the full report.
+If no `<dir>-report-*.pdf` is found, stop and tell the user to run
+`/audit-report <dir>` first (plain `/audit-report` for `audit`), since the
+brief report must name the full report.
 
 If any current-round `audit-*.md` file is newer (by modification time) than
 the full report PDF, warn the user that the full report may be out of date and
-suggest re-running `/audit-report`, then continue.
+suggest re-running `/audit-report <dir>`, then continue.
 
 ## Step 3: Write a CSS stylesheet
 
@@ -107,27 +135,27 @@ hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
 ## Step 4: Build the brief markdown document
 
 Use only the current round's files.  Never include anything from
-`AUDIT-CHECKLIST.md`, `audit/round-*/`, `tob-maturity.md`, or `tob-prep.md`
-other than the counts and checks described below.
+`AUDIT-CHECKLIST.md`, `<dir>/round-*/`, `tob-maturity.md`, `tob-prep.md`, or
+`tools.md` other than the counts and checks described below.
 
 Build a single markdown document in this order:
 
 1. **Basic info table** (generated):
 
-   Read the metadata lines (`**Date:**`, `**Auditor:**`, `**Scope:**`,
-   `**Repository:**`, `**Commit:**`) from the top of every current-round
-   `audit-*.md` file and produce:
+   Read the metadata lines (`**Date:**`, `**Auditor:**` or `**Reviewer:**`,
+   `**Scope:**`, `**Repository:**`, `**Commit:**`) from the top of every
+   current-round `audit-*.md` file and produce:
 
    ```
    | | |
    |---|---|
    | **Report date** | <today, YYYY-MM-DD> |
-   | **Audit date(s)** | <distinct dates, ascending, comma-separated> |
-   | **Auditor** | <distinct auditors> |
+   | **<kind> date(s)** | <distinct dates, ascending, comma-separated> |
+   | **<auditor label>** | <distinct auditors> |
    | **Repository** | <distinct repository URLs> |
    | **Commit** | <distinct full commit hashes> |
    | **Scope** | <every scope, comma-separated, in report filename order> |
-   | **Audit round** | <N, where N = 1 + number of audit/round-*/ directories> |
+   | **<kind> round** | <N, where N = 1 + number of <dir>/round-*/ directories> |
    | **Full report** | `<full report filename>` |
    ```
 
@@ -144,7 +172,7 @@ Build a single markdown document in this order:
 2. **Findings summary** (generated): a `# Findings Summary` section containing:
 
    - A severity count table built from the `**Total:**` line of
-     `audit/AUDIT-CHECKLIST.md`, listing only Critical, High, and Medium.
+     `<dir>/AUDIT-CHECKLIST.md`, listing only Critical, High, and Medium.
      Treat any severity not mentioned as 0:
 
      ```
@@ -199,7 +227,7 @@ Build a single markdown document in this order:
 
    *Low and Informational findings, the per-scope executive summaries, the
    round-over-round comparison, and the appendices are in the full report,
-   `audit/<full report filename>`.*
+   `<dir>/<full report filename>`.*
    ```
 
 Insert page breaks by placing this line, followed by a blank line, before the
@@ -221,15 +249,16 @@ pandoc /tmp/audit-brief.md \
   --to html \
   --standalone \
   --css /tmp/audit-brief.css \
-  --metadata title="Smart Contract Audit Report (Brief)" \
+  --metadata title="<title> (Brief)" \
   -o /tmp/audit-brief.html
 ```
 
 ```bash
-python3 -m weasyprint /tmp/audit-brief.html audit/audit-brief-<date>.pdf
+python3 -m weasyprint /tmp/audit-brief.html <dir>/<dir>-brief-<date>.pdf
 ```
 
-Where `<date>` is today's date in `YYYYMMDD` format.
+Where `<date>` is today's date in `YYYYMMDD` format (e.g.
+`audit/audit-brief-20261120.pdf`, `review-go/review-go-brief-20261120.pdf`).
 
 After running weasyprint, check whether the output PDF file exists and has
 non-zero size — this is the only success criterion. Warnings and non-zero exit
@@ -258,7 +287,7 @@ and the number of Critical, High, and Medium findings it includes.
 - Preserve the order: basic info table, findings summary, findings, closing
   note
 - Never include Low or Informational findings, executive summaries, the
-  round-over-round comparison, prior rounds, ToB output, or
+  round-over-round comparison, prior rounds, ToB output, `tools.md`, or
   `AUDIT-CHECKLIST.md`
 - Finding IDs must match the full report (`<scope> F-NN`)
 - Do not modify any source markdown files or the full report PDF; all

@@ -52,7 +52,7 @@ echo "libvirt-dev python3" > ~/projects/myapp/.devcontainer/.extra-packages
 | Value | Adds |
 |-------|------|
 | `base` | Minimal: common tools only (default) |
-| `go` | Go toolchain |
+| `go` | Go toolchain + staticcheck, gosec, govulncheck + pandoc/weasyprint (for review PDFs) |
 | `rust` | Rust + Cargo |
 | `python` | Python 3 + pip + virtualenv |
 | `node` | Node.js + npm + pnpm |
@@ -60,7 +60,7 @@ echo "libvirt-dev python3" > ~/projects/myapp/.devcontainer/.extra-packages
 | `solidity` | Foundry (forge, cast, anvil, chisel) + Slither |
 | `terraform` | Terraform |
 | `android` | OpenJDK 21 + Android SDK (platform-tools, build-tools 35, API 35) |
-| `all` | Go + Rust + Python + Node.js + Emacs + Solidity/Foundry/Slither (terraform and android excluded — both are large, purpose-specific installs) |
+| `all` | Go (with its review tools) + Rust + Python + Node.js + Emacs + Solidity/Foundry/Slither (terraform and android excluded — both are large, purpose-specific installs) |
 
 #### Updating Slither
 
@@ -71,6 +71,10 @@ misc/slither-constraints.sh 0.11.7
 ```
 
 It installs that version in a throwaway `alpine:3.24` container and prints the resolved `name==version` list.  Paste the output into `SLITHER_CONSTRAINTS`, set `SLITHER_VERSION` to match, then rebuild existing projects with `./ai-devcontainer.sh update`.
+
+#### Updating the Go review tools
+
+`staticcheck`, `gosec`, and `govulncheck` are pinned in `ai-devcontainer.sh` (`STATICCHECK_VERSION`, `GOSEC_VERSION`, `GOVULNCHECK_VERSION`); `go install` pins their dependencies through each tool's `go.sum`.  staticcheck's module tags (`v0.8.2`) differ from its release names (`2026.2.2`); use the module tag.  Set the new versions, then rebuild with `./ai-devcontainer.sh update`.  `govulncheck` fetches its database from `vuln.go.dev`, which is in the `go` firewall allowlist.
 
 ### Backends (`--backend`)
 
@@ -266,10 +270,10 @@ Generates a single combined PDF from all audit rounds once the current round is 
   4. Detailed findings from each `/audit` report
   5. Appendices: excerpts of the Trail of Bits output (maturity executive summary, scorecard and roadmap; prep static analysis and checklist), then prior rounds in order
 - Leaves the checklist out of the PDF; it is only used for the completeness check and severity totals
-- Converts to a formatted A4 PDF via pandoc and weasyprint (available in the `solidity` container); long code, paths and table cells wrap so nothing runs past the page margins
+- Converts to a formatted A4 PDF via pandoc and weasyprint (available in the `solidity` and `go` containers); long code, paths and table cells wrap so nothing runs past the page margins
 - Writes `audit/audit-report-<date>.pdf` and cleans up all temporary files
 
-Usage: run `/audit-report` from the project root with no arguments after all `/audit` runs are complete.
+Usage: run `/audit-report` from the project root after all `/audit` runs are complete.  It defaults to `audit/`; pass a review directory to build a code review report instead, e.g. `/audit-report review-go` writes `review-go/review-go-report-<date>.pdf` titled "Go Code Review Report", with the static analysis tool summary (`tools.md`) as an appendix in place of the Trail of Bits excerpts.
 
 #### `/audit-brief`
 
@@ -284,7 +288,7 @@ Generates a short companion PDF to the full `/audit-report` PDF, for readers who
 - Covers the current round only
 - Uses the same A4 layout as `/audit-report`, and writes `audit/audit-brief-<date>.pdf`
 
-Usage: run `/audit-brief` from the project root with no arguments after `/audit-report`.
+Usage: run `/audit-brief` from the project root after `/audit-report`, with the same directory argument (none for `audit/`; e.g. `/audit-brief review-go` writes `review-go/review-go-brief-<date>.pdf`).
 
 #### `/full-audit`
 

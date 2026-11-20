@@ -159,3 +159,53 @@
     - README/CLAUDE.md: probably no change, since neither documents these hints.  Check and mark this item done.
 
     **Phase 2 status (2026-11-20)** — Done.  Neither README nor CLAUDE.md mentions the hints, so no doc changes.
+
+16. **Code review pipeline for non-Solidity code** — The `/full-audit` pipeline, but for Go first, then Rust and JS.  Ends with a full PDF and a brief PDF with findings at Critical through Informational severity.  Separate skills from the Solidity ones, so the Solidity pipeline is left alone: `/pre-review`, `/review-go` (later `/review-rust`, `/review-js`), and `/full-review`.  `/audit-report` and `/audit-brief` are shared.
+
+    **Layout.**  Solidity keeps `audit/`.  Each other language gets its own `review-<lang>/` directory (e.g. `review-go/`), so a repo with JS and Solidity, or Go and Solidity, can have both without collisions.  Inside a review directory the file names match `audit/` (`AUDIT-CHECKLIST.md`, `audit-<scope>-<date>.md`, `round-N/`), so the report skills read them the same way.  The PDFs are named after the directory: `<dir>-report-<date>.pdf` and `<dir>-brief-<date>.pdf`.  For `audit/` this gives the current names (`audit-report-*`, `audit-brief-*`).
+
+    **Phase 1 — Go image (`ai-devcontainer.sh`)**
+    - Install `staticcheck`, `gosec`, and `govulncheck` with `go install <module>@<version>` in `lang_postinstall_go`, versions pinned in variables near `SLITHER_VERSION`.  Look up the current releases and check they build with Alpine 3.24's Go.
+    - `all` currently gets only the Solidity postinstall; add the Go one to it.
+    - Add `pandoc py3-weasyprint font-dejavu fontconfig` to `lang_packages_go`, since the PDFs are generated in the Go container.
+    - Add `vuln.go.dev` to `FIREWALL_DOMAINS_GO` (`govulncheck` fetches the vulnerability database at run time).
+    - Check whether `go test -race` works on musl without extra packages (it needs cgo).  If it needs `build-base`, decide then whether it's worth adding.
+    - README/CLAUDE.md: the Go lang entry lists the new tools and domain.
+    - Test (host): `update` a `go` image; run each tool against a Go repo; `govulncheck ./...` works with the firewall on; `pandoc` and `weasyprint` run.
+
+    **Phase 1 status (2026-11-20)** — Done, signed off 2026-11-20.  Host test (on `hemilabs/traefik-jsonrpc-filter`): image builds; staticcheck, gosec, and govulncheck all run with the firewall on; `go test -race ./...` works on musl with no extra packages; pandoc 3.10 and WeasyPrint 68.1 run.  Pinned staticcheck `v0.8.2` (2026.2.2), gosec `v2.30.0`, govulncheck `v1.10.0`; all need Go 1.26.0, and Alpine 3.24 ships 1.26.11.  Alpine's `go` package already depends on `gcc` and `musl-dev`, so cgo is there for `-race`.  The PDF packages moved into a shared `_lang_packages_pdf`.  Generated `go`, `all`, and `solidity` Dockerfiles checked by eye.
+
+    **Phase 2 — Report skills take a directory (`skills/audit-report/`, `skills/audit-brief/`)**
+    - Optional argument: the directory, default `audit`.  Every `audit/` path in the two skills uses it.
+    - Title from the directory: `audit` keeps "Smart Contract Audit Report" (and "(Brief)"); `review-<lang>` gives "<Lang> Code Review Report" (and "(Brief)").  `/audit-brief` looks for the full PDF as `<dir>/<dir>-report-*.pdf`.
+    - Appendix: in a review directory, `tools.md` (written by `/pre-review`) goes in as an appendix with the per-tool summary only, the same way the ToB excerpts work.  `tob-*.md` handling is unchanged.
+    - README: document the argument.
+    - Test: run both skills with no argument on an existing Solidity `audit/` directory and check the output is unchanged apart from the date.
+
+    **Phase 2 status (2026-11-20)** — Done, signed off 2026-11-20.  User test passed: both skills run with no argument on a Solidity `audit/` directory match the previous PDFs apart from the date.  Both skills have a Step 0 that sets `<dir>`, `<title>`, `<kind>` (Audit/Review), and `<auditor label>` (Auditor/Reviewer); the info table labels use `<kind>`, so `audit/` keeps "Audit date(s)", "Auditor", and "Audit round".  They read `**Auditor:**` or `**Reviewer:**` from the per-file reports and replace whatever the leading `#` heading is.  The `tools.md` appendix takes only its `## Summary` section.  `/full-audit` is unchanged (no argument means `audit`).
+
+    **Phase 3 — `/pre-review [lang]` (`skills/pre-review/`)**
+    - Language from the argument, or detected (`go.mod` → go).  If more than one language is found with no argument, stop and ask.  Languages without a review skill yet stop with "not supported yet".
+    - Same state handling as `/pre-audit`: no checklist → first run; unchecked items → stop; all checked → archive to `review-<lang>/round-N/` and start a new round, annotating each item with its prior-round findings.
+    - Go: `go build ./...` must pass (stop if not).  Run `go vet`, `staticcheck`, `gosec`, `govulncheck`, and `go test -race` (best effort, with a time limit; test failures are context, not a stop).  Write `review-go/tools.md`: a `## Summary` section first (per-tool table: tool, version, one-line result, plus any notes; `/audit-report` puts only this section in the PDF), then the raw output.
+    - Checklist items are packages (directories), not files.  Order: bottom of the import graph first, entry points (`cmd/`, HTTP/RPC/gRPC handlers) last.  Skip generated code (`// Code generated ... DO NOT EDIT.`), `vendor/`, and `testdata/`, and say so in the Scope line.  Same checklist format as `/pre-audit`.
+    - README: `/pre-review` section.
+
+    **Phase 4 — `/review-go <package-dir>` (`skills/review-go/`)**
+    - Same report layout, finding IDs, severity-scaled detail, checklist update, and `**Total:**` line as `/audit`, written to `review-go/audit-<scope>-<date>.md`.  Header title "Go Code Security Review"; a `**Reviewer:**` line (in place of `**Auditor:**`) with `<git config user.email> & Claude`.
+    - Severity definitions for general software:
+      - Critical: remote code execution, authentication/authorization bypass, or remote data loss/corruption, with no preconditions.
+      - High: the same with preconditions; remotely triggerable crash/panic; secret or sensitive-data exposure.
+      - Medium: DoS under load, resource leaks, data races with real impact, weak crypto/TLS settings.
+      - Low: best-practice violations with no direct impact.
+      - Informational: code quality, documentation.
+    - Go checklist: injection (SQL, `os/exec`, templates), path traversal, SSRF, crypto/TLS misuse and `math/rand` for secrets, ignored errors, panics reachable from input (nil maps/pointers, index, type assertions), data races and goroutine/context leaks, unbounded reads/allocations (`io.ReadAll`, missing size limits and timeouts), integer conversion/overflow, `unsafe`/cgo, secrets in logs, known-vulnerable dependencies.  Uses `review-go/tools.md` to back or rule out findings; tool hits that don't hold up are not reported.
+    - Regression tests for Critical/High are Go tests (`_test.go`), not Foundry.
+    - README: `/review-go` section.
+
+    **Phase 5 — `/full-review [lang]` (`skills/full-review/`)**
+    - Same flow as `/full-audit`: detect state → `/pre-review` → `/review-<lang>` on each unchecked item → `/audit-report review-<lang>` → `/audit-brief review-<lang>` → summary with both PDF paths.  Same failure rules.
+    - README and CLAUDE.md: `/full-review`, the review skill list, and the `review-<lang>/` layout.
+    - Test (host or `go` container): `/full-review` end to end on a real Go repo, then check both PDFs.
+
+    Later, as separate items: `/review-rust` and `/review-js`, plus their tools in `/pre-review` and the Rust/Node images.

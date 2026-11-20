@@ -1,14 +1,41 @@
 ---
 name: audit-report
-description: Generate a combined PDF report from all audit markdown files.
+description: Generate a combined PDF report from all audit or review markdown files.
+argument-hint: [directory]
 allowed-tools: Bash, Read, Write
 ---
 
-Generate a combined PDF audit report from all markdown files in the `audit/` directory.
+Generate a combined PDF report from all markdown files in an audit or review
+directory.
+
+## Step 0: Resolve the report directory
+
+Take the directory from `$ARGUMENTS`, dropping any trailing `/`.  If
+`$ARGUMENTS` is empty, use `audit`.  Call it `<dir>` below.
+
+`<dir>` must be `audit` (Solidity, written by `/audit`) or `review-<lang>`
+(written by `/review-<lang>`, e.g. `review-go`).  If it is anything else, or the
+directory does not exist, stop and report the error.
+
+Set these from `<dir>`:
+
+| `<dir>` | `<title>` | `<kind>` | `<auditor label>` |
+|---|---|---|---|
+| `audit` | `Smart Contract Audit Report` | `Audit` | `Auditor` |
+| `review-go` | `Go Code Review Report` | `Review` | `Reviewer` |
+| `review-rust` | `Rust Code Review Report` | `Review` | `Reviewer` |
+| `review-js` | `JavaScript Code Review Report` | `Review` | `Reviewer` |
+
+For any other `review-<lang>`, use `<Lang> Code Review Report` with the
+language name capitalized, `Review`, and `Reviewer`.
+
+All files below are read from and written to `<dir>/`.  The per-file reports
+are named `audit-*.md` and the checklist `AUDIT-CHECKLIST.md` in every
+directory, including review directories.
 
 ## Step 1: Check checklist completion
 
-Read `audit/AUDIT-CHECKLIST.md`. If it does not exist, stop and report that no
+Read `<dir>/AUDIT-CHECKLIST.md`. If it does not exist, stop and report that no
 checklist was found.
 
 Scan the `## Progress` section for any unchecked items (`- [ ]`). If any are
@@ -17,12 +44,14 @@ not be generated until all audit items are checked off.
 
 ## Step 2: Locate audit files
 
-Look for the following in the `audit/` directory:
+Look for the following in the `<dir>/` directory:
 - `AUDIT-CHECKLIST.md` — progress tracker (used for the completeness check and
   severity totals only; it is NOT included in the PDF)
-- `audit-*.md` — individual audit reports (include in filename order)
+- `audit-*.md` — individual audit or review reports (include in filename order)
 - `tob-maturity.md`, `tob-prep.md` — Trail of Bits output (selected sections
-  only go into the appendices, if present)
+  only go into the appendices, if present; `audit/` only)
+- `tools.md` — static analysis tool output from `/pre-review` (its summary
+  only goes into the appendices, if present; review directories only)
 
 If no `audit-*.md` files are found, stop and report the error.
 
@@ -101,21 +130,24 @@ Build a single combined markdown document in this order:
 
 1. **Report header** (generated):
 
-   Read the metadata lines (`**Date:**`, `**Auditor:**`, `**Scope:**`,
-   `**Repository:**`, `**Commit:**`) from the top of every current-round
-   `audit-*.md` file and produce:
+   Read the metadata lines (`**Date:**`, `**Auditor:**` or `**Reviewer:**`,
+   `**Scope:**`, `**Repository:**`, `**Commit:**`) from the top of every
+   current-round `audit-*.md` file and produce:
 
    ```
    | | |
    |---|---|
    | **Report date** | <today, YYYY-MM-DD> |
-   | **Audit date(s)** | <distinct dates, ascending, comma-separated> |
-   | **Auditor** | <distinct auditors> |
+   | **<kind> date(s)** | <distinct dates, ascending, comma-separated> |
+   | **<auditor label>** | <distinct auditors> |
    | **Repository** | <distinct repository URLs> |
    | **Commit** | <distinct full commit hashes> |
    | **Scope** | <every scope, comma-separated, in report filename order> |
-   | **Audit round** | <N, where N = 1 + number of audit/round-*/ directories> |
+   | **<kind> round** | <N, where N = 1 + number of <dir>/round-*/ directories> |
    ```
+
+   For `audit/` this gives exactly the labels used before review directories
+   existed (`Audit date(s)`, `Auditor`, `Audit round`).
 
    For any field where reports disagree, list every distinct value (one per
    line, separated with `<br>`). Do NOT add a top-level `#` title here — pandoc
@@ -124,7 +156,7 @@ Build a single combined markdown document in this order:
 2. **Findings summary** (generated): a `# Findings Summary` section containing:
 
    - A severity count table built from the `**Total:**` line of the current
-     `audit/AUDIT-CHECKLIST.md`. Treat any severity not mentioned as 0, and
+     `<dir>/AUDIT-CHECKLIST.md`. Treat any severity not mentioned as 0, and
      list all five severities in order:
 
      ```
@@ -153,14 +185,14 @@ Build a single combined markdown document in this order:
 
      If there are no findings at all, write `No findings.` instead of the table.
 
-3. **Round-over-round comparison** (only if at least one `audit/round-*/`
+3. **Round-over-round comparison** (only if at least one `<dir>/round-*/`
    directory exists):
 
    Generate a `# Round-over-Round Comparison` section. Build it as follows:
 
    - Read the `**Total:**` line from the current round's `AUDIT-CHECKLIST.md`
      and from the most recently archived round's `AUDIT-CHECKLIST.md` (the
-     highest-numbered `audit/round-*/` directory).
+     highest-numbered `<dir>/round-*/` directory).
    - Parse out the per-severity counts from each total line. Treat any severity
      not mentioned as 0.
    - Produce a markdown table with columns: Severity, Previous Round, Current
@@ -173,10 +205,12 @@ Build a single combined markdown document in this order:
 4. **Detailed findings**: each current-round `audit-*.md` file in alphabetical
    filename order. Before appending each file, transform its content in the
    combined document only:
-   - Replace the leading `# Smart Contract Security Audit` heading with
+   - Replace the leading `#` heading (`# Smart Contract Security Audit`, or
+     e.g. `# Go Code Security Review` in a review directory) with
      `# Detailed Findings: <scope>`
-   - Remove the `**Date:**`, `**Auditor:**`, `**Scope:**`, `**Repository:**`,
-     and `**Commit:**` lines (already shown in the report header)
+   - Remove the `**Date:**`, `**Auditor:**` or `**Reviewer:**`, `**Scope:**`,
+     `**Repository:**`, and `**Commit:**` lines (already shown in the report
+     header)
 
 5. **Appendices**:
 
@@ -212,19 +246,27 @@ Build a single combined markdown document in this order:
    Within each appendix, demote the copied headings so the largest is `##`
    (preserving their relative levels) and drop any leading numbering.
 
-   - If `audit/tob-maturity.md` exists, append its selected sections under the
+   - If `<dir>/tob-maturity.md` exists, append its selected sections under the
      heading `# Appendix: Code Maturity Assessment (Trail of Bits)`
-   - If `audit/tob-prep.md` exists, append its selected sections under the
+   - If `<dir>/tob-prep.md` exists, append its selected sections under the
      heading `# Appendix: Audit Preparation (Trail of Bits)`
    - At the end of each ToB appendix, add this line (with `tob-prep.md` for
      the prep appendix):
 
      ```
-     *Excerpt.  The full output is in `audit/tob-maturity.md`.*
+     *Excerpt.  The full output is in `<dir>/tob-maturity.md`.*
      ```
-   - Prior rounds (if any `audit/round-*/` directories exist), in ascending
+   - If `<dir>/tools.md` exists, append only its `## Summary` section (the
+     per-tool summary table and any notes under it, up to the next `##`
+     heading) under the heading `# Appendix: Static Analysis Tools`, then add
+     this line:
+
+     ```
+     *Excerpt.  The full output is in `<dir>/tools.md`.*
+     ```
+   - Prior rounds (if any `<dir>/round-*/` directories exist), in ascending
      round order (`round-1/`, `round-2/`, etc.). For each round, insert a
-     top-level heading `# Appendix: Round N Audit`, then append that round's
+     top-level heading `# Appendix: Round N <kind>`, then append that round's
      `audit-*.md` files in alphabetical order (with the same header-stripping
      transform as step 4, but using `## Round N Findings: <scope>` as the
      heading). Include only the maturity scorecard from that round's
@@ -255,15 +297,16 @@ pandoc /tmp/audit-combined.md \
   --to html \
   --standalone \
   --css /tmp/audit-report.css \
-  --metadata title="Smart Contract Audit Report" \
+  --metadata title="<title>" \
   -o /tmp/audit-combined.html
 ```
 
 ```bash
-python3 -m weasyprint /tmp/audit-combined.html audit/audit-report-<date>.pdf
+python3 -m weasyprint /tmp/audit-combined.html <dir>/<dir>-report-<date>.pdf
 ```
 
-Where `<date>` is today's date in `YYYYMMDD` format.
+Where `<date>` is today's date in `YYYYMMDD` format (e.g.
+`audit/audit-report-20261120.pdf`, `review-go/review-go-report-20261120.pdf`).
 
 After running weasyprint, check whether the output PDF file exists and has
 non-zero size — this is the only success criterion. Warnings and non-zero exit
