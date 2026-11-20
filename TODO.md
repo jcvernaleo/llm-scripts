@@ -113,7 +113,7 @@
     **Phase 2 — Docs** — Done, signed off 2026-10-12.
     - README `/audit-report` section: notes the A4 layout and wrapping.  CLAUDE.md needed no change (it doesn't describe the stylesheet).  Item marked done.
 
-14. ~~**Brief audit report**~~ — **Done.**  New `/audit-brief` skill, run by `/full-audit` after `/audit-report`.  Add a short PDF alongside the full `/audit-report` PDF, for readers who only need the key results.  It holds just the basic info table and the Critical, High, and Medium findings, and names the full report file.  New `/audit-brief` skill, called by `/full-audit` after `/audit-report`.
+14. ~~**Brief audit report**~~ — **Done.**  New `/audit-brief` skill, run by `/full-audit` after `/audit-report`.  Add a short PDF alongside the full `/audit-report` PDF, for readers who only need the key results.  It holds just the basic info table and the Critical, High, and Medium findings, and names the full report file.
 
     **Phase 1 — `/audit-brief` skill (`skills/audit-brief/SKILL.md`)**
     - Preconditions, same as `/audit-report`: the checklist exists and is complete, and at least one current-round `audit-*.md` exists.  Also needs the full PDF: use the newest `audit/audit-report-*.pdf`.  If there is none, stop and tell the user to run `/audit-report` first.  If any current-round `audit-*.md` is newer than that PDF, warn that the full report may be out of date and continue.
