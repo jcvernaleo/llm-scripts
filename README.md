@@ -312,6 +312,7 @@ The `/full-audit` pipeline for general code, Go first.  Each language writes to 
 |-------|-------------|
 | `/pre-review` | Verify build, run the language's static analysis tools, and produce an ordered review checklist; auto-detects re-reviews |
 | `/review-go` | Security-focused review of one Go package, with findings at Critical through Informational severity |
+| `/full-review` | Run the complete pipeline: pre-review, review every checklist item, generate the full and brief PDFs |
 
 #### `/pre-review`
 
@@ -335,6 +336,16 @@ The `/audit` equivalent for one Go package directory, e.g. `/review-go internal/
 - Severity: Critical = RCE, auth bypass, or remote data loss with no preconditions; High = the same with preconditions, a remotely triggerable crash, or secret exposure; Medium = DoS under load, leaks, races with real impact, weak crypto/TLS; Low = best practice; Informational = code quality
 - Same report layout and severity-scaled detail as `/audit`; Critical/High regression tests are Go tests
 - Writes `review-go/audit-<scope>-<date>.md`, where `<scope>` is the package path with `/` → `-` (e.g. `audit-internal-rpc-20261120.md`), and checks the item off in `review-go/AUDIT-CHECKLIST.md` with its finding counts and the running total
+
+#### `/full-review`
+
+Runs the entire review pipeline in one command, the same way `/full-audit` does.  Takes the language as an argument (`/full-review go`) or detects it like `/pre-review`:
+
+- **No prior checklist** → runs `/pre-review`, reviews every checklist item in order with `/review-<lang>`, then generates the PDFs
+- **Incomplete checklist** → resumes from the first unchecked item (skips pre-review), then generates the PDFs
+- **Complete checklist** → runs `/pre-review` (re-review path: archives the round, fresh checklist), reviews every item, then generates the PDFs
+
+The PDFs are `/audit-report review-<lang>` followed by `/audit-brief review-<lang>`, e.g. `review-go/review-go-report-<date>.pdf` and `review-go/review-go-brief-<date>.pdf`.  Failures are handled as in `/full-audit`: anything up to the full report stops the run; a brief report failure is reported, but the summary still prints.
 
 ### Web security
 

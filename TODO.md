@@ -160,7 +160,7 @@
 
     **Phase 2 status (2026-11-20)** — Done.  Neither README nor CLAUDE.md mentions the hints, so no doc changes.
 
-16. **Code review pipeline for non-Solidity code** — The `/full-audit` pipeline, but for Go first, then Rust and JS.  Ends with a full PDF and a brief PDF with findings at Critical through Informational severity.  Separate skills from the Solidity ones, so the Solidity pipeline is left alone: `/pre-review`, `/review-go` (later `/review-rust`, `/review-js`), and `/full-review`.  `/audit-report` and `/audit-brief` are shared.
+16. ~~**Code review pipeline for non-Solidity code**~~ — **Done.**  The `/full-audit` pipeline, but for Go first, then Rust and JS.  Ends with a full PDF and a brief PDF with findings at Critical through Informational severity.  Separate skills from the Solidity ones, so the Solidity pipeline is left alone: `/pre-review`, `/review-go` (later `/review-rust`, `/review-js`), and `/full-review`.  `/audit-report` and `/audit-brief` are shared.
 
     **Layout.**  Solidity keeps `audit/`.  Each other language gets its own `review-<lang>/` directory (e.g. `review-go/`), so a repo with JS and Solidity, or Go and Solidity, can have both without collisions.  Inside a review directory the file names match `audit/` (`AUDIT-CHECKLIST.md`, `audit-<scope>-<date>.md`, `round-N/`), so the report skills read them the same way.  The PDFs are named after the directory: `<dir>-report-<date>.pdf` and `<dir>-brief-<date>.pdf`.  For `audit/` this gives the current names (`audit-report-*`, `audit-brief-*`).
 
@@ -214,4 +214,16 @@
     - README and CLAUDE.md: `/full-review`, the review skill list, and the `review-<lang>/` layout.
     - Test (host or `go` container): `/full-review` end to end on a real Go repo, then check both PDFs.
 
-    Later, as separate items: `/review-rust` and `/review-js`, plus their tools in `/pre-review` and the Rust/Node images.
+    **Phase 5 status (2026-11-20)** — Done, signed off 2026-11-20.  User end-to-end test passed.  Language detection defers to `/pre-review`'s Step 0 rules, and the language is passed to `/pre-review` explicitly.  README has the `/full-review` row and section; CLAUDE.md lists the code review skills and the `review-<lang>/` layout.
+
+    Rust and JS are items 17 and 18.
+
+17. **Rust code review (`/review-rust`)** — Add Rust to the item 16 pipeline: `/review-rust <crate-or-module>`, and Rust support in `/pre-review` and `/full-review` (detected from `Cargo.toml`, output in `review-rust/`).  `/audit-report`/`/audit-brief` already handle `review-rust` ("Rust Code Review Report").
+    - Image: pinned review tools in the `rust` lang (likely `cargo-audit` and `cargo-deny`; `clippy` comes from the `rust` package if Alpine ships it) plus `_lang_packages_pdf`; firewall for the RustSec advisory DB.
+    - `/pre-review`: `cargo build`, `cargo clippy`, `cargo audit`, `cargo test` into `review-rust/tools.md`; checklist unit to decide (crate vs module).
+    - `/review-rust`: Rust checklist (`unsafe`, panics/`unwrap` on input, integer overflow in release builds, `Send`/`Sync`, FFI, deserialization limits, async cancellation, vulnerable crates) with the item 16 severities; Rust regression tests.
+
+18. **JS/TS code review (`/review-js`)** — Add JavaScript/TypeScript to the item 16 pipeline: `/review-js <dir>`, and JS support in `/pre-review` and `/full-review` (detected from `package.json`, output in `review-js/`).  Common case: a repo with both JS and Solidity, where `review-js/` and `audit/` sit side by side.  `/audit-report`/`/audit-brief` already handle `review-js` ("JavaScript Code Review Report").
+    - Image: pinned tools in the `node` lang (e.g. `npm audit`/`pnpm audit` are built in; consider `eslint` with a security plugin, or `semgrep`) plus `_lang_packages_pdf`; firewall for any advisory endpoints.
+    - `/pre-review`: install check (as `/pre-audit` does for `node_modules`), build/typecheck if configured, audit, lint, tests into `review-js/tools.md`; skip the Solidity sources and `node_modules/`; checklist unit to decide (directory vs workspace package).
+    - `/review-js`: JS/TS checklist (prototype pollution, XSS/DOM sinks, injection, SSRF, path traversal, unsafe `eval`/`Function`/`vm`, deserialization, authz in API routes, ReDoS, secrets in client bundles, supply chain/install scripts) with the item 16 severities; reuse the `/vuln-scan`, `/authz-review`, `/depcheck` checks where they apply.

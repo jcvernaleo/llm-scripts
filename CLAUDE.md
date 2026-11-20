@@ -49,7 +49,7 @@ The main script dynamically generates a Dockerfile at `init` time and embeds it 
 
 ### Skills (`skills/`)
 
-Claude Code skills for session management, workspace scaffolding, smart contract auditing, and web security review. Each skill lives in its own subdirectory (`skills/<name>/SKILL.md`) and is invoked as a slash command.
+Claude Code skills for session management, workspace scaffolding, smart contract auditing, code review, and web security review. Each skill lives in its own subdirectory (`skills/<name>/SKILL.md`) and is invoked as a slash command.
 
 Session management: `/status`, `/sessions`, `/resume`, `/save-session`
 (Session state is persisted to `~/.claude/sessions/<project-name>/session-state.md`.)
@@ -57,6 +57,8 @@ Session management: `/status`, `/sessions`, `/resume`, `/save-session`
 Workspace: `/new-workspace`
 
 Smart contract audit: `/pre-audit`, `/audit`, `/audit-report`, `/audit-brief`, `/full-audit`
+
+Code review (non-Solidity, Go so far): `/pre-review`, `/review-go`, `/full-review`.  Each language writes to its own `review-<lang>/` directory (Solidity keeps `audit/`), using the same file names as `audit/` (`AUDIT-CHECKLIST.md`, `audit-<scope>-<date>.md`, `round-N/`).  `/audit-report` and `/audit-brief` take the directory as an optional argument (default `audit`) and name the PDFs `<dir>-report-<date>.pdf` and `<dir>-brief-<date>.pdf`.
 
 Web security: `/vuln-scan`, `/sqli-deep`, `/authz-review`, `/secrets-audit`, `/depcheck`
 
