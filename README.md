@@ -7,7 +7,7 @@ Helper scripts for using LLMs (Claude Code, OpenCode) to work on code. Written w
 - **`ai-devcontainer.sh`** — Main tool. Manages isolated container environments for AI coding assistants, with network firewall, language toolchains, and session management.
 - **`clone-all.sh`** / **`status-all.sh`** / **`update-all.sh`** — Multi-repo utilities.
 - **`misc/slither-constraints.sh`** — Regenerates the pinned Slither dependency list used by the `solidity` image.
-- **`skills/`** — Custom Claude Code skills (session management, workspace scaffolding, smart contract audit, web security).
+- **`skills/`** — Custom Claude Code skills (session management, workspace scaffolding, smart contract audit, code review, web security).
 
 ---
 
@@ -303,6 +303,38 @@ The PDFs are the full report (`/audit-report`) followed by the brief report (`/a
 If anything fails (build error, audit error, full report error), stops immediately and reports the failure.  If only the brief report fails, it reports the error but still prints the summary, since the full PDF was already written.
 
 Usage: run `/full-audit` from the project root with no arguments.
+
+### Code review (non-Solidity)
+
+The `/full-audit` pipeline for general code, Go first.  Each language writes to its own `review-<lang>/` directory (e.g. `review-go/`), so a repo can also have a Solidity `audit/` directory without collisions.  The PDFs come from `/audit-report` and `/audit-brief` with the directory as the argument.
+
+| Skill | Description |
+|-------|-------------|
+| `/pre-review` | Verify build, run the language's static analysis tools, and produce an ordered review checklist; auto-detects re-reviews |
+| `/review-go` | Security-focused review of one Go package, with findings at Critical through Informational severity |
+
+#### `/pre-review`
+
+The `/pre-audit` equivalent.  Takes the language as an argument (`/pre-review go`), or detects it from `go.mod`/`go.work`, `Cargo.toml`, or `package.json`; if it finds more than one, it asks.  Only Go is supported so far.
+
+- **No prior checklist** → builds every Go module (`go build ./...`, stops on failure), runs the tools, and writes `review-go/AUDIT-CHECKLIST.md`
+- **Checklist incomplete** → stops and lists the outstanding items
+- **Checklist complete** → archives the current round to `review-go/round-N/`, re-runs the build and tools, and writes a new checklist annotated with prior findings
+
+Tools: `go vet`, `staticcheck`, `gosec`, `govulncheck`, and `go test -race` (best effort, 15-minute limit; test failures are recorded, not errors).  All are in the `go` container.  The output goes to `review-go/tools.md`: a short `## Summary` table (which `/audit-report` puts in the PDF as an appendix), then each tool's full output.
+
+Checklist items are package directories, not files, ordered up the import graph: packages with no in-repo imports first, `cmd/` and network-facing handler packages last.  `vendor/`, `testdata/`, and fully generated packages are skipped.
+
+#### `/review-go`
+
+The `/audit` equivalent for one Go package directory, e.g. `/review-go internal/rpc`:
+
+- Reviews every non-test file in the package, following untrusted input across package boundaries (it reads the packages it imports and finds its callers)
+- Uses `review-go/tools.md` as leads: tool reports are confirmed against the code, and only the ones that hold up are reported
+- Checks for injection (SQL, `os/exec`, templates), path traversal, SSRF, auth bypass, crypto/TLS misuse, ignored errors, panics reachable from input, data races and goroutine/context leaks, unbounded reads and missing timeouts, integer conversions, `unsafe`/cgo, leaked secrets, and vulnerable dependencies
+- Severity: Critical = RCE, auth bypass, or remote data loss with no preconditions; High = the same with preconditions, a remotely triggerable crash, or secret exposure; Medium = DoS under load, leaks, races with real impact, weak crypto/TLS; Low = best practice; Informational = code quality
+- Same report layout and severity-scaled detail as `/audit`; Critical/High regression tests are Go tests
+- Writes `review-go/audit-<scope>-<date>.md`, where `<scope>` is the package path with `/` → `-` (e.g. `audit-internal-rpc-20261120.md`), and checks the item off in `review-go/AUDIT-CHECKLIST.md` with its finding counts and the running total
 
 ### Web security
 

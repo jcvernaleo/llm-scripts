@@ -190,9 +190,12 @@
     - Go: `go build ./...` must pass (stop if not).  Run `go vet`, `staticcheck`, `gosec`, `govulncheck`, and `go test -race` (best effort, with a time limit; test failures are context, not a stop).  Write `review-go/tools.md`: a `## Summary` section first (per-tool table: tool, version, one-line result, plus any notes; `/audit-report` puts only this section in the PDF), then the raw output.
     - Checklist items are packages (directories), not files.  Order: bottom of the import graph first, entry points (`cmd/`, HTTP/RPC/gRPC handlers) last.  Skip generated code (`// Code generated ... DO NOT EDIT.`), `vendor/`, and `testdata/`, and say so in the Scope line.  Same checklist format as `/pre-audit`.
     - README: `/pre-review` section.
+    - Test (`go` container): `/pre-review` on a Go repo; check `review-go/tools.md` (summary table first, full output per tool) and that the checklist is package directories in import-graph order.  Then run it again with an unchecked item (should stop).
+
+    **Phase 3 status (2026-11-20)** — Done, signed off 2026-11-20.  User test passed: `tools.md` and the package checklist came out as specified, and a second run stopped on the unchecked items.  Multi-module repos: each `go.mod` (or the `go.work` list) is built and checked from its own root.  Checklist examples use the Phase 4 scope naming (`audit-internal-rpc-<date>.md`): the package path with `/` → `-`, because Go repos often have same-named packages in different directories, which would collide under a base-name scope.  README has a new "Code review (non-Solidity)" section.
 
     **Phase 4 — `/review-go <package-dir>` (`skills/review-go/`)**
-    - Same report layout, finding IDs, severity-scaled detail, checklist update, and `**Total:**` line as `/audit`, written to `review-go/audit-<scope>-<date>.md`.  Header title "Go Code Security Review"; a `**Reviewer:**` line (in place of `**Auditor:**`) with `<git config user.email> & Claude`.
+    - Same report layout, finding IDs, severity-scaled detail, checklist update, and `**Total:**` line as `/audit`, written to `review-go/audit-<scope>-<date>.md`, where `<scope>` is the package directory with `/` → `-` (`internal/rpc` → `internal-rpc`; the root package `.` → the module's last path element).  Header title "Go Code Security Review"; a `**Reviewer:**` line (in place of `**Auditor:**`) with `<git config user.email> & Claude`.
     - Severity definitions for general software:
       - Critical: remote code execution, authentication/authorization bypass, or remote data loss/corruption, with no preconditions.
       - High: the same with preconditions; remotely triggerable crash/panic; secret or sensitive-data exposure.
@@ -202,6 +205,9 @@
     - Go checklist: injection (SQL, `os/exec`, templates), path traversal, SSRF, crypto/TLS misuse and `math/rand` for secrets, ignored errors, panics reachable from input (nil maps/pointers, index, type assertions), data races and goroutine/context leaks, unbounded reads/allocations (`io.ReadAll`, missing size limits and timeouts), integer conversion/overflow, `unsafe`/cgo, secrets in logs, known-vulnerable dependencies.  Uses `review-go/tools.md` to back or rule out findings; tool hits that don't hold up are not reported.
     - Regression tests for Critical/High are Go tests (`_test.go`), not Foundry.
     - README: `/review-go` section.
+    - Test (`go` container): with the checklist from `/pre-review`, run `/review-go` on two or three packages (at least one leaf and one handler/entry-point package); check the report layout, the scope-based filename, the checklist line and `**Total:**` update, and that tool reports in `tools.md` were confirmed or dropped rather than copied.
+
+    **Phase 4 status (2026-11-20)** — Done, signed off 2026-11-20.  User test passed, including `/audit-report review-go` and `/audit-brief review-go` on the results (the review-directory path of Phase 2).  Allowed tools: `git`, `go`, `grep`, Read, Write; it never edits source or test files.  Tool reports that don't hold up are left out, apart from at most one "Areas verified" bullet summarizing them.  With no findings anywhere, the total line is `**Total: No findings**` (the report skills treat missing severities as 0).
 
     **Phase 5 — `/full-review [lang]` (`skills/full-review/`)**
     - Same flow as `/full-audit`: detect state → `/pre-review` → `/review-<lang>` on each unchecked item → `/audit-report review-<lang>` → `/audit-brief review-<lang>` → summary with both PDF paths.  Same failure rules.
