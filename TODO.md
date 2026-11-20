@@ -144,3 +144,18 @@
     - CLAUDE.md: add `/audit-brief` to the smart contract audit skill list.  Mark this item done.
 
     **Phase 3 status (2026-11-03)** — Done, signed off 2026-11-03.
+
+15. ~~**Quieter `code`/`shell` startup**~~ — **Done.**  When `code` or `shell` starts a stopped container, it calls `cmd_start`, which ends with two hints: `Run '... shell ...' to get a shell` and `Run '... code ...' to start the AI assistant`.  These are pointless when you're already running `code`/`shell`, and with `"tui": "fullscreen"` they show up after you exit Claude.
+
+    **Phase 1 — Skip the hints (`ai-devcontainer.sh`)**
+    - Add an internal `--no-hints` flag to `cmd_start`'s argument parser (not listed in the usage text).  When set, skip the two `Run '...'` lines.  `Container ... started` stays.
+    - `cmd_code` and `cmd_shell` pass `--no-hints` in their `start_args`.
+    - Everything else stays: firewall, port, `--open-network`, and `--dangerously-skip-permissions` messages are still printed.
+    - Test: `bash -n`; run `start` and check the hints print; run `code`/`shell` on a stopped container and check they don't (needs the host, since there's no container engine here).
+
+    **Phase 1 status (2026-11-20)** — Done, signed off 2026-11-20.  `bash -n` passes; tested by the user in another container.
+
+    **Phase 2 — Docs**
+    - README/CLAUDE.md: probably no change, since neither documents these hints.  Check and mark this item done.
+
+    **Phase 2 status (2026-11-20)** — Done.  Neither README nor CLAUDE.md mentions the hints, so no doc changes.

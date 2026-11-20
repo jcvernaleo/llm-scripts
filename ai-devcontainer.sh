@@ -963,6 +963,7 @@ cmd_start() {
     local ports=()
     local project_dir=""
     local open_network=false
+    local hints=true
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -981,6 +982,11 @@ cmd_start() {
                 ;;
             --open-network|-O)
                 open_network=true
+                shift
+                ;;
+            --no-hints)
+                # Internal: passed by code/shell, which don't need the hints
+                hints=false
                 shift
                 ;;
             *)
@@ -1124,8 +1130,10 @@ cmd_start() {
     fi
 
     log_info "Container $container_name started"
-    log_info "Run '$0 shell $project_dir' to get a shell"
-    log_info "Run '$0 code $project_dir' to start the AI assistant"
+    if [[ "$hints" == "true" ]]; then
+        log_info "Run '$0 shell $project_dir' to get a shell"
+        log_info "Run '$0 code $project_dir' to start the AI assistant"
+    fi
 }
 
 # Get a shell in the container
@@ -1194,7 +1202,7 @@ cmd_shell() {
 
     # Start if not running, passing port and network args
     if ! container_running "$container_name"; then
-        local start_args=()
+        local start_args=(--no-hints)
         for port in "${ports[@]}"; do
             start_args+=(--port "$port")
         done
@@ -1285,7 +1293,7 @@ cmd_code() {
 
     # Start if not running, passing port and network args
     if ! container_running "$container_name"; then
-        local start_args=()
+        local start_args=(--no-hints)
         for port in "${ports[@]}"; do
             start_args+=(--port "$port")
         done
